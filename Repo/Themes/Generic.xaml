@@ -1,0 +1,13 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:DRFront">
+    <Style TargetType="{x:Type local:DataGridMod}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <DataGrid />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>
