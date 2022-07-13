@@ -28,6 +28,7 @@ namespace DRFront
         private DateTime VivadoLastLaunched;
         private const string VivadoRootPath = @"C:\Xilinx\Vivado\";
         private List<string> SourceFileNames;
+        private const string BaseCheckPointFileName = "base.dcp";
         private const string TopVHDLFileName = "dr_top.vhdl";
         private const string TestBenchVHDLFileName = "dr_testbench.vhdl";
         private const string NewProjectLabel = "(New Project)";
@@ -200,7 +201,9 @@ namespace DRFront
                 MsgBox.Warn("チェックポイントファイルが見つかりませんでした．");
                 return;
             }
-            args.Add("checkpoint_base", dcpBase);
+            string projectDir = VM.SourceDirPath + @"\" + VM.CurrentProject;
+            File.Copy(dcpBase, projectDir + @"\" + BaseCheckPointFileName);
+            args.Add("checkpoint_base", BaseCheckPointFileName);
             args.Add("checkpoint_proj", dcpFile);
             args.Add("project_name", VM.CurrentProject);
             if (! PrepareTcl(VM.CurrentProject, tclFile, Properties.Resources.GENERATE_BITSTREAM, args))

@@ -9,12 +9,12 @@ FPGAの一部分をユーザが書き換える形でディジタル回路の設�
 します．現時点では，Digilent社のNexys A7-100Tボードのみを対象としています．
 
 配布パッケージのダウンロード:
-<a href="https://aitech.ac.jp/~dslab/nf/DRFront/DRFront_dist_v0_2_0.zip">
+<a href="https://aitech.ac.jp/~dslab/nf/DRFront/DRFront_dist_v0_2_1.zip">
 ZIP</a> (2.13 MiB)
 
 ### 配布パッケージの内容:
 - sources/              : プログラムのソースコード
-- base.dcp              : DRFront が使用する Vivado のチェックポイント
+- base.dcp              : ベース設計の Vivado のチェックポイント
 - COPYING               : 著作権表記
 - DRFront.exe           : DRFront 本体
 - README.txt            : このファイル
@@ -79,6 +79,12 @@ Ookii Dialogs は New BSD ライセンスに従って DLL ファイルを再配�
 す．詳細は COPYING ファイルを参照してください．
 
 ### 更新履歴
+- v0.2.1 2022-07-13
+  - ベース設計のチェックポイントに任意のファイル名をつけられるよう変更．
+  - ベース設計のチェックポイントの上書きを防ぐため，Generate Bitstream
+    ボタンを押したときに，ベース設計のチェックポイントをプロジェクトに
+    コピーする仕様に変更．
+
 - v0.2.0 2022-03-02
   - シミュレーション用のプロジェクト作成に対応．
   - VHDL のテンプレートを作成する機能を追加．

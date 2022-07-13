@@ -5,14 +5,15 @@ The design assumes the following hiearchy.
 TOP
  |- DR_TOP (instantiated from TOP as DR): to be reconfigured dynamically
 
-1. Synthesize TOP with blank DR_TOP.
-   Source files are top.vhdl, dr_blank.vhdl, and Nexys.xdc.
+1. Create a Vivado project and synthesize TOP with blank DR_TOP.
+   All VHDL and XDC files, except dr_base.vhdl and dr_blank.vhdl, are used.
 
 2. Save the design checkpoint (File - Checkpoint - Write).
    The design synthesized in Step 1 has to be opened.
 
-3. Synthesize a base DR_TOP using dr_top.vhdl and dr_base.vhdl.
-   An additional synthesis option "-mode out-of-context" is required.
+3. Create another project and synthesize a base DR_TOP,
+   using dr_top.vhdl and dr_base.vhdl.
+   An additional synthesis option "-mode out_of_context" is required.
 
 4. Save the design checkpoint.
 
@@ -31,7 +32,7 @@ TOP
    Only the DFX-related rules have to be checked.
    If DRC fails, modify the Pblock according to messages and try again.
 
-9. Save the design constraints.
+9. Save the design constraints. (optional)
    Steps 6-8 can be performed at once using the saved XDC file.
 >     write_xdc -force PBLOCK.xdc
 
@@ -42,6 +43,6 @@ TOP
 >     write_bitstream BITSTREAM.bit
 
 11. Let DR be a black box again and save the checkpoint.
->     update_design -cell RM -black_box
+>     update_design -cell DR -black_box
 >     lock_design -level routing
 >     write_checkpoint base.dcp

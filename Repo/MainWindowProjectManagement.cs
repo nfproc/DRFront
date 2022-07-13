@@ -95,8 +95,8 @@ namespace DRFront
             {
                 if (File.Exists(subDir.FullName + @"\" + subDir.Name + ".xpr"))
                 {
-                    bool dcp = (subDir.GetFiles(@"*.dcp").Length != 0);
-                    bool bit = (subDir.GetFiles(@"*.bit").Length != 0);
+                    bool dcp = (EnumerateVivadoFiles(subDir.FullName, "DCPFileExceptBase").Count != 0);
+                    bool bit = (EnumerateVivadoFiles(subDir.FullName, "BITFile").Count != 0);
                     result.Add(new VivadoProject(subDir.Name, dcp, bit));
                 }
             }
@@ -104,16 +104,39 @@ namespace DRFront
             return result;
         }
 
+        // Vivado 関連ファイルの一覧をリストアップする
+        private List<string> EnumerateVivadoFiles(string dir, string mode)
+        {
+            List<string> result = new List<string>();
+            string ext = ".*";
+            if (mode == "BITFile")
+                ext = ".bit";
+            else if (mode == "DCPFile" || mode == "DCPFileExceptBase")
+                ext = ".dcp";
+
+            DirectoryInfo dirInfo = new DirectoryInfo(dir);
+            if (dirInfo.Exists)
+                foreach (FileInfo file in dirInfo.GetFiles("*" + ext))
+                    if (file.Name.EndsWith(ext) &&
+                        (mode != "DCPFileExceptBase" || file.Name != BaseCheckPointFileName))
+                        result.Add(file.Name);
+            return result;
+        }
+
         // ベースデザインの dcp ファイルのある場所を返す
         private string GetBaseCheckpointName()
         {
-            const string baseFile = "base.dcp";
             string baseDir = Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory) + @"\";
+            List<string> baseNames = EnumerateVivadoFiles(baseDir, "DCPFile");
 
-            if (File.Exists(baseDir + baseFile))
-                return (baseDir + baseFile).Replace(@"\", "/");
-            else
+            if (baseNames.Count == 0)
                 return "";
+            if (baseNames.Count > 1)
+                if (! MsgBox.WarnAndConfirm("ベース設計のチェックポイントファイルが複数見つかりました．\n" +
+                    baseNames[baseNames.Count - 1] + "を使用します．\n続行しますか？"))
+                    return "";
+
+            return baseDir + baseNames[baseNames.Count - 1];
         }
 
         // プロジェクトの dcp ファイルのある場所を返す（複数ある場合は1つに絞る）
@@ -122,16 +145,10 @@ namespace DRFront
             const string defaultName = "__checkpoint.dcp";
             string projectDir = VM.SourceDirPath + @"\" + VM.CurrentProject;
 
-            DirectoryInfo projectDirInfo = new DirectoryInfo(projectDir);
             if (! VM.IsSourcesValid)
                 return "";
-            if (! projectDirInfo.Exists)
-                return "";
 
-            List<string> checkpointNames = new List<string>();
-            foreach (FileInfo file in projectDirInfo.GetFiles(@"*.dcp"))
-                if (file.Name.EndsWith(".dcp"))
-                    checkpointNames.Add(file.Name);
+            List<string> checkpointNames = EnumerateVivadoFiles(projectDir, "DCPFileExceptBase");
 
             if (checkpointNames.Count == 0)
                 return "";
