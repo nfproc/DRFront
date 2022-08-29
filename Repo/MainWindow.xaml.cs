@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Windows.Shapes;
 using System.Windows.Input;
 using System.Windows.Threading;
+using System.Security.Cryptography;
 using System;
 using Ookii.Dialogs.Wpf;
 
@@ -201,8 +202,31 @@ namespace DRFront
                 MsgBox.Warn("チェックポイントファイルが見つかりませんでした．");
                 return;
             }
+
             string projectDir = VM.SourceDirPath + @"\" + VM.CurrentProject;
-            File.Copy(dcpBase, projectDir + @"\" + BaseCheckPointFileName);
+            string checkPointPath = projectDir + @"\" + BaseCheckPointFileName;
+            try
+            {
+                File.Copy(dcpBase, checkPointPath, true);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                if (CompareFileHash(dcpBase, checkPointPath))
+                {
+                    MsgBox.Warn("ベース設計のチェックポイントファイルのコピーに失敗しましたが，同一ファイルが既に存在するので，このまま続けます．");
+                }
+                else
+                {
+                    MsgBox.Warn("ベース設計のチェックポイントファイルのコピーに失敗しました．");
+                    return;
+                }
+            }
+            catch (Exception)
+            {
+                MsgBox.Warn("ベース設計のチェックポイントファイルのコピーに失敗しました．");
+                return;
+            }
+
             args.Add("checkpoint_base", BaseCheckPointFileName);
             args.Add("checkpoint_proj", dcpFile);
             args.Add("project_name", VM.CurrentProject);
@@ -279,6 +303,24 @@ namespace DRFront
         {
             if (! (Keyboard.IsKeyDown(Key.Down) || Keyboard.IsKeyDown(Key.Up)))
                 e.Handled = true;
+        }
+
+        // ファイルの一致確認
+        private bool CompareFileHash(string path1, string path2)
+        {
+            try
+            {
+                HashAlgorithm hash = new SHA1CryptoServiceProvider();
+                FileStream fs1 = new FileStream(path1, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                FileStream fs2 = new FileStream(path2, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                string bs1 = BitConverter.ToString(hash.ComputeHash(fs1));
+                string bs2 = BitConverter.ToString(hash.ComputeHash(fs2));
+                return bs1 == bs2;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 }

@@ -9,7 +9,7 @@ FPGAの一部分をユーザが書き換える形でディジタル回路の設�
 します．現時点では，Digilent社のNexys A7-100Tボードのみを対象としています．
 
 配布パッケージのダウンロード:
-<a href="https://aitech.ac.jp/~dslab/nf/DRFront/DRFront_dist_v0_2_1.zip">
+<a href="https://aitech.ac.jp/~dslab/nf/DRFront/DRFront_dist_v0_2_2.zip">
 ZIP</a> (2.13 MiB)
 
 ### 配布パッケージの内容:
@@ -79,6 +79,10 @@ Ookii Dialogs は New BSD ライセンスに従って DLL ファイルを再配�
 す．詳細は COPYING ファイルを参照してください．
 
 ### 更新履歴
+- v0.2.2 2022-08-29
+  - ベース設計のチェックポイントのコピーに失敗した際，DRFront が強制終了
+    する不具合を修正．
+
 - v0.2.1 2022-07-13
   - ベース設計のチェックポイントに任意のファイル名をつけられるよう変更．
   - ベース設計のチェックポイントの上書きを防ぐため，Generate Bitstream
