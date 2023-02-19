@@ -1,0 +1,48 @@
+How to synthesize a base design
+===============================
+
+The design assumes the following hiearchy.
+TOP
+ |- DR_TOP (instantiated from TOP as DR): to be reconfigured dynamically
+
+1. Create a Vivado project and synthesize TOP with blank DR_TOP.
+   All VHDL and XDC files, except dr_base.vhdl and dr_blank.vhdl, are used.
+
+2. Save the design checkpoint (File - Checkpoint - Write).
+   The design synthesized in Step 1 has to be opened.
+
+3. Create another project and synthesize a base DR_TOP,
+   using dr_top.vhdl and dr_base.vhdl.
+   An additional synthesis option "-mode out_of_context" is required.
+
+4. Save the design checkpoint.
+
+5. Open the checkpoint saved in Step 2 (File - Checkpoint - Open).
+
+6. Add the checkpoint saved in Step 4 as the DR instance.
+>     set_property HD.RECONFIGURABLE true [get_cells DR]
+>     read_checkpoint -cell [get_cells DR] CHECKPOINT.dcp
+
+7. Create Pblock.
+   In the Device tab, turn on Draw Pblock button and select a region for DR.
+   Then execute the following command in the tcl shell.
+>     add_cells_to_pblock [get_pblocks pblock_DR] [get_cells DR]
+
+8. Check the design rules (Reports - Report DRC).
+   Only the DFX-related rules have to be checked.
+   If DRC fails, modify the Pblock according to messages and try again.
+
+9. Save the design constraints. (optional)
+   Steps 6-8 can be performed at once using the saved XDC file.
+>     write_xdc -force PBLOCK.xdc
+
+10. Perform the implementation steps and generate a bitstream.
+>     opt_design
+>     place_design
+>     route_design
+>     write_bitstream BITSTREAM.bit
+
+11. Let DR be a black box again and save the checkpoint.
+>     update_design -cell DR -black_box
+>     lock_design -level routing
+>     write_checkpoint base.dcp

@@ -85,10 +85,19 @@
     <Compile Include="MainWindowSourceManagement.cs" />
     <Compile Include="MainWindowVivado.cs" />
     <Compile Include="MsgBox.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="TopSelectorViewModel.cs" />
     <Compile Include="VHDLSources.cs" />
     <Compile Include="VHDLTemplateViewModel.cs" />
     <Compile Include="VHDLTemplateWindow.xaml.cs">
       <DependentUpon>VHDLTemplateWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="TopSelectorWindow.xaml.cs">
+      <DependentUpon>TopSelectorWindow.xaml</DependentUpon>
     </Compile>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -111,16 +120,15 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="TopSelectorWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="MainViewModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Properties\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -137,8 +145,6 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
-    <None Include="Resources\CREATE_PROJECT.tcl" />
-    <None Include="Resources\CREATE_SIMULATION.tcl" />
     <None Include="Resources\DR_TEMPLATE.vhdl" />
     <None Include="Resources\DR_TESTBENCH.vhdl" />
     <None Include="Resources\DR_TOP.vhdl" />

@@ -1,0 +1,28 @@
+﻿<Window x:Class="DRFront.TopSelectorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:DRFront"
+        mc:Ignorable="d"
+        Title="Pick a module" Height="250" Width="400" MinHeight="250" MinWidth="400" Loaded="Window_Loaded" WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+        <local:HierarchyLevelConverter x:Key="levelConverter" />
+        <local:HierarchyPathConverter x:Key="pathConverter" />
+        <local:HierarchyTopColorConverter x:Key="topColorConverter" />
+        <local:HierarchyTopFontConverter x:Key="topFontConverter" />
+    </Window.Resources>
+    <Grid Margin="15">
+        <ListBox ItemsSource="{Binding}" x:Name="lstHierarchy" SelectionChanged="List_SelectionChanged">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Margin="{Binding Path=Level, Converter={StaticResource levelConverter}}">
+                            <Run Text="{Binding Path=Name}" Foreground="{Binding Path=IsTop, Converter={StaticResource topColorConverter}}"
+                                 FontWeight="{Binding Path=IsTop, Converter={StaticResource topFontConverter}}"/>
+                            <Run Text="{Binding Path=ShortPath, Converter={StaticResource pathConverter}}" FontSize="10" Foreground="Gray"/>
+                    </TextBlock>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</Window>

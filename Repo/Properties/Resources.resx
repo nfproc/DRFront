@@ -118,12 +118,6 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="CREATE_PROJECT" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\CREATE_PROJECT.tcl;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
-  </data>
-  <data name="CREATE_SIMULATION" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\CREATE_SIMULATION.tcl;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
-  </data>
   <data name="DR_TEMPLATE" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\DR_TEMPLATE.vhdl;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
   </data>

@@ -1,5 +1,5 @@
 ﻿// DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
-// Copyright (C) 2022 Naoki FUJIEDA. New BSD License is applied.
+// Copyright (C) 2022-2023 Naoki FUJIEDA. New BSD License is applied.
 //**********************************************************************
 
 using System.IO;
@@ -12,6 +12,8 @@ using System.Windows.Threading;
 using System.Security.Cryptography;
 using System;
 using Ookii.Dialogs.Wpf;
+using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace DRFront
 {
@@ -19,23 +21,34 @@ namespace DRFront
     public partial class MainWindow : Window
     {
         private MainViewModel VM;
+        private TopEntityFinder TopFinder;
         private Dictionary<string, Rect> ComponentLocations;
         private Dictionary<string, Rectangle> ComponentRectangles;
         private Dictionary<string, string> ComponentDefaults;
         private List<VHDLPort> VHDLUserPorts;
         private string SelectedRectangleName = "";
+        private bool ProjectListUpdating = false;
 
+        private string DRFrontVersion;
         private string VivadoVersion;
         private DateTime VivadoLastLaunched;
         private const string VivadoRootPath = @"C:\Xilinx\Vivado\";
         private List<string> SourceFileNames;
-        private const string BaseCheckPointFileName = "base.dcp";
-        private const string TopVHDLFileName = "dr_top.vhdl";
-        private const string TestBenchVHDLFileName = "dr_testbench.vhdl";
         private const string NewProjectLabel = "(New Project)";
-        private const string NewSimulationLabel = "(New Simulation)";
         private string LastSourceDir = "";
         private DispatcherTimer updateTimer;
+
+        private static class FileName
+        {
+            public const string BaseCheckPoint = "base.dcp";
+            public const string UserCheckPoint = "__checkpoint.dcp";
+            public const string TopVHDL = "dr_top.vhdl";
+            public const string TestBenchVHDL = "dr_testbench.vhdl";
+            public const string OpenProjectTCL = "OpenProject.tcl";
+            public const string BitGenTCL = "GenerateBitstream.tcl";
+            public const string OpenHWTCL = "OpenHW.tcl";
+            public const string LogFolder = "logs";
+        }
 
         public MainWindow()
         {
@@ -49,6 +62,9 @@ namespace DRFront
             updateTimer = new DispatcherTimer();
             updateTimer.Tick += UpdateTimer_Timer;
             updateTimer.Interval = new TimeSpan(0, 0, 3);
+
+            string version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            DRFrontVersion = Regex.Replace(version, @".[0-9]+$", "");
 
             VivadoVersion = CheckVivadoVersion();
             if (VivadoVersion == null)
@@ -81,10 +97,55 @@ namespace DRFront
 
         }
 
+        // プロジェクトのドロップダウンを変更したとき
+        private void Project_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (! ProjectListUpdating)
+                ReadProjectSettings();
+        }
+
+        // プロジェクトを作成するボタンが押されたとき
+        private void CreateProject_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM.CurrentProject != NewProjectLabel || ! VM.IsSourceValid)
+                return;
+
+            string project = GetNewProjectName();
+            Directory.CreateDirectory(VM.SourceDirPath + @"\" + project);
+            Directory.CreateDirectory(VM.SourceDirPath + @"\" + project + @"\" + FileName.LogFolder);
+            VM.CurrentProject = project;
+            VM.IsNewProjectSelected = false;
+            VM.IsProjectValid = true;
+            TopFinder.SetTopEntity(TopFinder.SuggestedTopEntity);
+            UpdateUserPorts();
+            GenerateTopVHDL(project);
+            UpdateProjectList();
+        }
+
+        // トップモジュールを変更するボタンが押されたとき
+        private void SelectTop_Click(object sender, RoutedEventArgs e)
+        {
+            TopSelectorWindow win = new TopSelectorWindow();
+            foreach (EntityHierarchyItem item in TopFinder.ListItems)
+            {
+                item.IsTop = (item.Name == VM.UserEntity);
+                win.HierarchyCollection.Add(item);
+            }
+            win.Owner = GetWindow(this);
+            win.ShowDialog();
+            if (win.ReturnValue != null)
+            {
+                TopFinder.SetTopEntity(win.ReturnValue, true);
+                UpdateUserPorts();
+                GenerateTopVHDL(VM.CurrentProject);
+            }
+         }
+
         // VHDL テンプレート作成画面を表示するボタンが押されたとき
         private void VHDLTemplate_Click(object sender, RoutedEventArgs e)
         {
             VHDLTemplateWindow win = new VHDLTemplateWindow();
+            win.Owner = GetWindow(this);
             win.Show();
         }
 
@@ -95,8 +156,9 @@ namespace DRFront
                 return;
             
             Dictionary<string, List<string>> assign = GetAssignments();
-            List<string> clockNames = new List<string> { "CK", "CLK", "CLOCK" };
-            List<string> resetNames = new List<string> { "RST", "RESET" };
+            List<string> clockNames = new List<string> { "CK", "CLK", "CLOCK", "ICK", "ICLK", "ICLOCK" };
+            List<string> resetNames = new List<string> { "RST", "RESET", "IRST", "IRESET" };
+            bool clockAssigned = false, resetAssigned = false;
             foreach (var port in VM.UserPorts)
             {
                 if (port.TopPort != "")
@@ -105,12 +167,14 @@ namespace DRFront
                 {
                     port.TopPort = "CLK";
                     assign["CLK"].Add(port.Name);
+                    clockAssigned = true;
                     continue;
                 }
                 if (resetNames.Contains(port.Name.ToUpper()) && assign["RST"].Count == 0)
                 {
                     port.TopPort = "RST";
                     assign["RST"].Add(port.Name);
+                    resetAssigned = true;
                     continue;
                 }
                 foreach (var con in assign)
@@ -125,8 +189,16 @@ namespace DRFront
                     }
                 }
             }
-            UpdateComponentRectangles();    
-            GenerateTopVHDL();        
+
+            UpdateComponentRectangles();
+            GenerateTopVHDL(VM.CurrentProject);
+
+            if (clockAssigned || resetAssigned)
+            {
+                string sig = (clockAssigned && resetAssigned) ? "CLK および RST" :
+                             (clockAssigned) ? "CLK" : "RST";
+                MsgBox.Info("ボード上の " + sig + " へ自動割当てを行いました．\n意図した割当てになっているか確認してください．");
+            }
         }
 
         // 割当てを初期化するボタンが押されたとき
@@ -137,81 +209,62 @@ namespace DRFront
             foreach (var port in VM.UserPorts)
                 port.TopPort = "";
             UpdateComponentRectangles();
-            GenerateTopVHDL();
+            GenerateTopVHDL(VM.CurrentProject);
         }
 
-        // Vivado のプロジェクトを新規作成，または開くボタンが押されたとき
-        private void OpenProject_Click(object sender, RoutedEventArgs e)
+        // プロジェクトごとに必要なファイルを作成/更新するボタンが押されたとき
+        private void UpdateFiles_Click(object sender, RoutedEventArgs e)
         {
-            const string tclFile = "OpenProject.tcl";
-            if (! CheckForLaunchVivado())
+            if (! CheckProjectVersion(VM.CurrentProject))
                 return;
 
-            Dictionary<string, string> args = new Dictionary<string, string>();
-            string template, project;
+            // ログを保存するフォルダ（なければ作成）
+            if (!Directory.Exists(VM.SourceDirPath + @"\" + VM.CurrentProject + @"\logs"))
+                Directory.CreateDirectory(VM.SourceDirPath + @"\" + VM.CurrentProject + @"\logs");
 
+            // テストベンチ
+            GenerateTestBenchVHDL(VM.CurrentProject);
+
+            // プロジェクトを開く Tcl スクリプト
+            Dictionary<string, string> argsOpen = new Dictionary<string, string>();
             string escapedSource = "";
-            int i = 0;
             foreach (string fileName in SourceFileNames)
-            {
-                string sep = (i == SourceFileNames.Count - 1) ? "" : " ";
-                escapedSource += "../" + (new FileInfo(fileName).Name.Replace(" ", @"\ ")) + sep;
-                i += 1;
-            }
+                escapedSource += "../" + (new FileInfo(fileName).Name.Replace(" ", @"\ ")) + " ";
+            escapedSource += "./" + FileName.TopVHDL;
 
-            if (VM.CurrentProject == NewProjectLabel)
-            {
-                project = GetNewProjectName();
-                template = Properties.Resources.CREATE_PROJECT;
-                Directory.CreateDirectory(VM.SourceDirPath + @"\" + project);
-                escapedSource += " ../" + TopVHDLFileName;
-            }
-            else if (VM.CurrentProject == NewSimulationLabel)
-            {
-                project = GetNewProjectName("simulation");
-                template = Properties.Resources.CREATE_SIMULATION;
-                Directory.CreateDirectory(VM.SourceDirPath + @"\" + project);
-                GenerateTestBenchVHDL(project);
-            }
-            else
-            {
-                project = VM.CurrentProject;
-                template = Properties.Resources.OPEN_PROJECT;
-            }
+            argsOpen.Add("project_name", VM.CurrentProject);
+            argsOpen.Add("source_files", "{" + escapedSource + "}");
+            argsOpen.Add("testbench_file", FileName.TestBenchVHDL);
+            PrepareTcl(VM.CurrentProject, FileName.OpenProjectTCL, Properties.Resources.OPEN_PROJECT, argsOpen);
 
-            args.Add("project_name", project);
-            args.Add("source_files", "{" + escapedSource + "}");
-            args.Add("testbench_file", TestBenchVHDLFileName);
-            if (! PrepareTcl(project, tclFile, template, args))
-                return;
-            LaunchVivado(project, tclFile);
-        }
+            // ビットストリームを生成する Tcl スクリプト
+            Dictionary<string, string> argsGen = new Dictionary<string, string>();
 
-        // Vivado で配置配線を行うボタンが押されたとき
-        private void RunPAR_Click(object sender, RoutedEventArgs e)
-        {
-            const string tclFile = "GenerateBitstream.tcl";
-            if (! CheckForLaunchVivado())
-                return;
+            argsGen.Add("project_name", VM.CurrentProject);
+            argsGen.Add("checkpoint_base", FileName.BaseCheckPoint);
+            argsGen.Add("checkpoint_proj", FileName.UserCheckPoint);
+            PrepareTcl(VM.CurrentProject, FileName.BitGenTCL, Properties.Resources.GENERATE_BITSTREAM, argsGen);
 
-            Dictionary<string, string> args = new Dictionary<string, string>();
-            string dcpFile = GetCheckpointName();
+            // ハードウェアを開く Tcl スクリプト
+            PrepareTcl(VM.CurrentProject, FileName.OpenHWTCL, Properties.Resources.OPEN_HARDWARE);
+
+            // ベース設計のコピー
             string dcpBase = GetBaseCheckpointName();
-            if (dcpFile == "" || dcpBase == "")
+            if (dcpBase == "")
             {
-                MsgBox.Warn("チェックポイントファイルが見つかりませんでした．");
+                MsgBox.Warn("ベース設計のチェックポイントファイルが見つかりません．");
                 return;
             }
 
             string projectDir = VM.SourceDirPath + @"\" + VM.CurrentProject;
-            string checkPointPath = projectDir + @"\" + BaseCheckPointFileName;
+            string checkPointPath = projectDir + @"\" + FileName.BaseCheckPoint;
             try
             {
                 File.Copy(dcpBase, checkPointPath, true);
             }
-            catch (UnauthorizedAccessException)
+            catch (Exception ex)
             {
-                if (CompareFileHash(dcpBase, checkPointPath))
+                if ((ex is UnauthorizedAccessException) && (CompareFileHash(dcpBase, checkPointPath)))
                 {
                     MsgBox.Warn("ベース設計のチェックポイントファイルのコピーに失敗しましたが，同一ファイルが既に存在するので，このまま続けます．");
                 }
@@ -221,30 +274,30 @@ namespace DRFront
                     return;
                 }
             }
-            catch (Exception)
-            {
-                MsgBox.Warn("ベース設計のチェックポイントファイルのコピーに失敗しました．");
-                return;
-            }
-
-            args.Add("checkpoint_base", BaseCheckPointFileName);
-            args.Add("checkpoint_proj", dcpFile);
-            args.Add("project_name", VM.CurrentProject);
-            if (! PrepareTcl(VM.CurrentProject, tclFile, Properties.Resources.GENERATE_BITSTREAM, args))
-                return;
-            LaunchVivado(VM.CurrentProject, tclFile, true);
-
+            MsgBox.Info("Vivado 用のスクリプトや，テストベンチの雛形を作成・更新しました．");
         }
 
-        // Vivado でハードウェアマネージャーを開くボタンが押されたとき
-        private void OpenHW_Click(object sender, RoutedEventArgs e)
+        // Vivado を実行するボタンが押されたとき
+        private void RunVivado_Click(object sender, RoutedEventArgs e)
         {
-            const string tclFile = "OpenHW.tcl";
+            string tclFile = null;
+            string senderName = ((Button)sender).Name;
+            bool useBatchMode = (senderName == "btnBitGen");
+            if (senderName == "btnOpenProject")
+                tclFile = FileName.OpenProjectTCL;
+            else if (senderName == "btnBitGen")
+                tclFile = FileName.BitGenTCL;
+            else if (senderName == "btnOpenHW")
+                tclFile = FileName.OpenHWTCL;
+            else
+                return;
+
             if (! CheckForLaunchVivado())
                 return;
-            if (! PrepareTcl(VM.CurrentProject, tclFile, Properties.Resources.OPEN_HARDWARE))
+            if (! CheckTclVersion(VM.CurrentProject,tclFile))
                 return;
-            LaunchVivado(VM.CurrentProject, tclFile);
+
+            LaunchVivado(VM.CurrentProject, tclFile, useBatchMode);
         }
 
         // ピン配置をコンボボックスから切り替えたとき
@@ -254,7 +307,7 @@ namespace DRFront
             if (cmb.IsDropDownOpen || cmb.IsKeyboardFocused) // UIから選択を切り替えた時のみ処理
             {
                 UpdateComponentRectangles();
-                GenerateTopVHDL();
+                GenerateTopVHDL(VM.CurrentProject);
             }
         }
 
@@ -289,7 +342,7 @@ namespace DRFront
             item.TopPort = SelectedRectangleName;
             SelectedRectangleName = "";
             UpdateComponentRectangles();
-            GenerateTopVHDL();
+            GenerateTopVHDL(VM.CurrentProject);
         }
 
         // プロジェクトの状況を監視するタイマが作動したとき

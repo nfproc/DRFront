@@ -15,6 +15,8 @@ architecture TEST of DR_TESTBENCH is
 begin
 -- USER_UUT
 
+-- DO NOT modify/delete comments that say "Define waveforms ..."
+-- or you will lose your code when the template is updated!
 -- vvv Define waveforms of input signals vvv
 
 

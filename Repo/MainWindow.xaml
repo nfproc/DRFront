@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DRFront"
         mc:Ignorable="d"
-        Title="DRFront" Height="600" Width="640" MinHeight="560" MinWidth="640">
+        Title="DRFront" Height="640" Width="640" MinHeight="600" MinWidth="640">
     <Window.Resources>
         <local:SourceDirForeGroundConverter x:Key="sdForeGroundConverter" />
         <local:SourceDirBackGroundConverter x:Key="sdBackGroundConverter" />
@@ -18,6 +18,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="320"/>
             <RowDefinition MinHeight="80"/>
             <RowDefinition MinHeight="30" Height="Auto"/>
@@ -26,12 +27,12 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" MinWidth="100"/>
                 <ColumnDefinition />
-                <ColumnDefinition Width="Auto" MinWidth="50"/>
-                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="55"/>
+                <ColumnDefinition Width="95"/>
             </Grid.ColumnDefinitions>
             <Label Content="Source Dir." HorizontalAlignment="Center" VerticalAlignment="Center"/>
             <TextBox Text="{Binding SourceDirPath, Mode=TwoWay, UpdateSourceTrigger=Explicit}"
-                     Foreground="{Binding IsSourcesValid, Converter={StaticResource sdForeGroundConverter}}"
+                     Foreground="{Binding IsSourceValid, Converter={StaticResource sdForeGroundConverter}}"
                      Background="{Binding SourceProblem, Converter={StaticResource sdBackGroundConverter}}"
                      Grid.Column="1" VerticalAlignment="Center"
                      TextChanged="SourceDir_TextChanged" Height="24">
@@ -41,29 +42,40 @@
                 </TextBox.ToolTip>
             </TextBox>
             <Button Content="..." Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Click="FindSourceDir_Click" Height="24" Width="30"/>
-            <Button Content="Refresh" Grid.Row="0" Grid.Column="3" Height="24" Width="80" Margin="0,0,15,0"
+                    Click="FindSourceDir_Click" Width="30" Height="24" Margin="10,0,5,0" />
+            <Button Content="Refresh" Grid.Row="0" Grid.Column="3" Height="24" Margin="0,0,15,0"
                     VerticalAlignment="Center" Click="Refresh_Click"/>
         </Grid>
-        <Grid Grid.Row="1" Margin="0,5">
+        <Grid Grid.Row="1" Margin="0,5,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" MinWidth="100"/>
                 <ColumnDefinition />
-                <ColumnDefinition Width="Auto" MinWidth="100"/>
-                <ColumnDefinition />
+                <ColumnDefinition Width="150"/>
             </Grid.ColumnDefinitions>
             <Label Content="Project" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             <ComboBox Grid.Column="1" ItemsSource="{Binding VivadoProjects}"
-                      SelectedItem="{Binding CurrentProject, UpdateSourceTrigger=PropertyChanged}"/>
-            <Label Content="Top Module" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Column="2"/>
-            <TextBox Text="{Binding UserEntity}" Grid.Column="3" IsReadOnly="True" Margin="0,0,15,0"/>
+                      SelectedItem="{Binding CurrentProject, UpdateSourceTrigger=PropertyChanged}" SelectionChanged="Project_SelectionChanged"/>
+            <Button Content="Create Project" Grid.Column="2" Height="24" Margin="15,0,15,0"
+                    IsEnabled="{Binding IsNewProjectSelected}" VerticalAlignment="Center" Click="CreateProject_Click"/>
         </Grid>
-        <Canvas x:Name="cvsBoard" Width="600" Height="320" Grid.Row="2" AllowDrop="True"
+        <Grid Grid.Row="2" Margin="0,5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" MinWidth="100"/>
+                <ColumnDefinition />
+                <ColumnDefinition Width="150"/>
+            </Grid.ColumnDefinitions>
+            <Label Content="Top Module" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <TextBox Text="{Binding UserEntity}" Grid.Column="1" IsReadOnly="True"
+                     Height="24" VerticalAlignment="Center"/>
+            <Button Content="Select Top Module" Grid.Column="2" Height="24" Margin="15,0,15,0"
+                    IsEnabled="{Binding IsProjectValid}" VerticalAlignment="Center" Click="SelectTop_Click"/>
+        </Grid>
+        <Canvas x:Name="cvsBoard" Width="600" Height="320" Grid.Row="3" AllowDrop="True"
                 DragEnter="Board_DragEnter" DragLeave="Board_DragLeave" DragOver="Board_DragOver" Drop="Board_Drop">
             <Image Width="600" Height="320" HorizontalAlignment="Left" VerticalAlignment="Top"
                    Source="Resources/Nexys.jpg"/>
         </Canvas>
-        <Grid Grid.Row="3" Margin="0,5,0,0">
+        <Grid Grid.Row="4" Margin="0,5,0,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -107,7 +119,7 @@
             <Button Content="Reset" Grid.Row="2" Grid.Column="1" Height="24" Width="120" Margin="0,0,15,5"
                     HorizontalAlignment="Right" VerticalAlignment="Center" Click="ResetAssign_Click"/>
         </Grid>
-        <Grid Grid.Row="4" Margin="0,10">
+        <Grid Grid.Row="5" Margin="0,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition />
                 <ColumnDefinition Width="Auto"/>
@@ -116,12 +128,14 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition />
             </Grid.ColumnDefinitions>
-            <Button Content="Create/Open Project" Grid.Column="1" Height="24" Margin="5,0,5,0"
-                    IsEnabled="{Binding IsSourcesValid}" HorizontalAlignment="Center" VerticalAlignment="Center" Click="OpenProject_Click"/>
-            <Button Content="Generate Bitstream" Grid.Column="2" Height="24" Margin="5,0,5,0"
-                    IsEnabled="{Binding IsDCPAvailable}" HorizontalAlignment="Center" VerticalAlignment="Center" Click="RunPAR_Click"/>
-            <Button Content="Open Hardware Manager" Grid.Column="3" Height="24" Margin="5,0,5,0"
-                    IsEnabled="{Binding IsBITAvailable}" HorizontalAlignment="Center" VerticalAlignment="Center" Click="OpenHW_Click"/>
+            <Button Content="Create/Update Files" Grid.Column="1" Height="24" Margin="5,0,5,0"
+                    IsEnabled="{Binding IsProjectValid}" HorizontalAlignment="Center" VerticalAlignment="Center" Click="UpdateFiles_Click"/>
+            <Button Content="Open Project" Grid.Column="2" Height="24" Margin="5,0,5,0" x:Name="btnOpenProject"
+                    IsEnabled="{Binding IsTCLAvailable}" HorizontalAlignment="Center" VerticalAlignment="Center" Click="RunVivado_Click"/>
+            <Button Content="Generate Bitstream" Grid.Column="3" Height="24" Margin="5,0,5,0" x:Name="btnBitGen"
+                    IsEnabled="{Binding IsDCPAvailable}" HorizontalAlignment="Center" VerticalAlignment="Center" Click="RunVivado_Click"/>
+            <Button Content="Open Hardware Manager" Grid.Column="4" Height="24" Margin="5,0,5,0" x:Name="btnOpenHW"
+                    IsEnabled="{Binding IsBITAvailable}" HorizontalAlignment="Center" VerticalAlignment="Center" Click="RunVivado_Click"/>
         </Grid>
     </Grid>
 </Window>

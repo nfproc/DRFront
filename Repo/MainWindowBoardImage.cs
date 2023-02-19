@@ -1,5 +1,5 @@
 ﻿// DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
-// Copyright (C) 2022 Naoki FUJIEDA. New BSD License is applied.
+// Copyright (C) 2022-2023 Naoki FUJIEDA. New BSD License is applied.
 //**********************************************************************
 
 using System.Collections.Generic;

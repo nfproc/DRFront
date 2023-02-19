@@ -1,5 +1,5 @@
 ﻿// DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
-// Copyright (C) 2022 Naoki FUJIEDA. New BSD License is applied.
+// Copyright (C) 2022-2023 Naoki FUJIEDA. New BSD License is applied.
 //**********************************************************************
 
 using System.Windows;
@@ -7,6 +7,7 @@ using System.Windows;
 namespace DRFront
 {
     // ■■ メッセージボックス表示のためのユーティリティクラス ■■
+    // ToDo: Make an original dialog to display at the center of the parent window
     public static class MsgBox
     {
         public static void Info(string Message)
