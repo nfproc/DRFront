@@ -1,5 +1,5 @@
 -- FPGA RemoCon Project: translation between I/O and command string
--- 2022.04.21 Naoki F., AIT
+-- 2023.02.24 Naoki F., AIT
 ------------------------------------------------------------------------
 library IEEE;
 use IEEE.std_logic_1164.ALL;
@@ -36,6 +36,14 @@ architecture RTL of io_translator is
                LED_OUT  : out std_logic_vector(31 downto 0));
     end component;
 
+    component io_ledreg is
+        generic ( SAMPLE_INT : integer := 200000;
+                  STABLE_INT : integer := 16);
+        port ( CLK, RST : in  std_logic;
+               LED_IN   : in  std_logic_vector( 7 downto 0);
+               LED_OUT  : out std_logic_vector( 7 downto 0));
+    end component;
+
     signal recv_first_char : std_logic;                     -- '1' after receiving 1st char
     signal user_sw_reg     : std_logic_vector(10 downto 0); -- stored USER_SW value
     signal user_sw_sel     : integer range 0 to 10;         -- index of selected SW
@@ -48,11 +56,13 @@ architecture RTL of io_translator is
     signal user_led_new    : std_logic;                     -- new value of selected LED
 begin
 
-    -- instantiation of 7-seg register
+    -- instantiation of sampler circuits
     seg : io_7segreg
         generic map (SAMPLE_INT, STABLE_INT)
         port map (CLK, RST, USER_AN, USER_SEG, user_led_val(31 downto 0));
-    user_led_val(39 downto 32) <= USER_LED;
+    led : io_ledreg
+        generic map (SAMPLE_INT / 5, STABLE_INT)
+        port map (CLK, RST, USER_LED, user_led_val(39 downto 32));
 
     -- board LED signals are the same as user LED signals
     BOARD_LED <= USER_LED;
