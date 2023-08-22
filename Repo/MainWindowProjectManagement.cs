@@ -221,6 +221,25 @@ namespace DRFront
             return true;
         }
 
+        // Vivado が生成したファイルが古くなっていないか調べる
+        private bool CheckVivadoFilesStale(List<string> targ, List<string> cmp, string targDescription, string cmpDescription)
+        {
+            if (GetNewestTimestamp(targ) > GetNewestTimestamp(cmp))
+                return true;
+            return MsgBox.WarnAndConfirm(targDescription + " が " + cmpDescription + " より古いです．続行しますか？");
+        }
+
+        // 最も新しいファイルの更新時間を返す（CheckVivadoFilesStale で使用）
+        private DateTime GetNewestTimestamp(List<string> targ)
+        {
+            DateTime result = DateTime.MinValue;
+            foreach (string path in targ)
+                if (result < File.GetLastWriteTime(path))
+                    result = File.GetLastWriteTime(path);
+
+            return result;
+        }
+
         // 指定されたフォルダにあるプロジェクトの Vivado バージョンを調べる
         private string GetProjectVersion(string project)
         {
@@ -255,7 +274,7 @@ namespace DRFront
          }
 
         // Vivado 関連ファイルの一覧をリストアップする
-        private List<string> EnumerateVivadoFiles(string dir, string mode)
+        private List<string> EnumerateVivadoFiles(string dir, string mode, bool full = false)
         {
             List<string> result = new List<string>();
             string ext = ".*";
@@ -271,7 +290,7 @@ namespace DRFront
                 foreach (FileInfo file in dirInfo.GetFiles("*" + ext))
                     if (file.Name.EndsWith(ext) &&
                         (mode != "DCPFileExceptBase" || file.Name != FileName.BaseCheckPoint))
-                        result.Add(file.Name);
+                        result.Add((full) ? file.FullName : file.Name);
             return result;
         }
 
@@ -289,34 +308,6 @@ namespace DRFront
                     return "";
 
             return baseDir + baseNames[baseNames.Count - 1];
-        }
-
-        // プロジェクトの dcp ファイルのある場所を返す（複数ある場合は1つに絞る）
-        private string GetCheckpointName()
-        {
-            const string defaultName = "__checkpoint.dcp";
-            string projectDir = VM.SourceDirPath + @"\" + VM.CurrentProject;
-
-            if (! VM.IsProjectValid)
-                return "";
-
-            List<string> checkpointNames = EnumerateVivadoFiles(projectDir, "DCPFileExceptBase");
-
-            if (checkpointNames.Count == 0)
-                return "";
-            if (checkpointNames.Count == 1)
-                return checkpointNames[0];
-            checkpointNames.Sort(new FileNameWithIntPostfixSorter<string>());
-            string lastName = checkpointNames[checkpointNames.Count - 1];
-
-            if (! MsgBox.WarnAndConfirm("チェックポイントファイルが複数見つかりました．\n" +
-                lastName + " だけを残し，ファイル名を " + defaultName + "に変更します．\n続行しますか？"))
-                return "";
-
-            for (int i = 0; i < checkpointNames.Count - 1; i += 1)
-                File.Delete(projectDir + @"\" + checkpointNames[i]);
-            File.Move(projectDir + @"\" + lastName, projectDir + @"\" + defaultName);
-            return defaultName;
         }
 
         // プロジェクトや dcp が複数ある場合の名前比較用メソッドを実装するクラス

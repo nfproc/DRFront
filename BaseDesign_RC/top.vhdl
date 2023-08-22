@@ -1,8 +1,9 @@
 -- FPGA RemoCon Project: Top module for DRFront
--- 2022.04.21 Naoki F., AIT
+-- 2022.07.13 Naoki F., AIT
 ------------------------------------------------------------------------
 library IEEE;
 use IEEE.std_logic_1164.ALL;
+use IEEE.std_logic_unsigned.ALL;
 
 entity TOP is
     generic ( WAIT_DIV : integer := 868 );
@@ -31,23 +32,46 @@ architecture STRUCTURE of TOP is
         port ( CLK, RST : in  std_logic;
                TXD      : out std_logic;
                RXD      : in  std_logic;
-               BOARD_SW  : in  std_logic_vector(10 downto 0);
+               BOARD_SW  : in  std_logic_vector(12 downto 0);
                BOARD_LED : out std_logic_vector( 7 downto 0);
                BOARD_AN  : out std_logic_vector( 3 downto 0);
                BOARD_SEG : out std_logic_vector( 7 downto 0);
-               USER_SW   : out std_logic_vector(10 downto 0);
+               USER_SW   : out std_logic_vector(12 downto 0);
                USER_LED  : in  std_logic_vector( 7 downto 0);
                USER_AN   : in  std_logic_vector( 3 downto 0);
                USER_SEG  : in  std_logic_vector( 7 downto 0));
     end component;
 
-    signal int_rst                                          : std_logic;
+    component ila_0 is
+        port ( clk     : in std_logic;
+               probe0  : in std_logic_vector(15 downto 0);
+               probe1  : in std_logic_vector(15 downto 0);
+               probe2  : in std_logic_vector( 7 downto 0);
+               probe3  : in std_logic;
+               probe4  : in std_logic;
+               probe5  : in std_logic;
+               probe6  : in std_logic;
+               probe7  : in std_logic;
+               probe8  : in std_logic;
+               probe9  : in std_logic;
+               probe10  : in std_logic;
+               probe11  : in std_logic;
+               probe12 : in std_logic;
+               probe13 : in std_logic;
+               probe14 : in std_logic;
+               probe15 : in std_logic;
+               probe16 : in std_logic;
+               probe17 : in std_logic);
+    end component;
+
+    signal int_rst, n_int_rst                               : std_logic;
     signal int_sw                                           : std_logic_vector(15 downto 0);
     signal int_btnc, int_btnl, int_btnr, int_btnu, int_btnd : std_logic;
     signal int_ld                                           : std_logic_vector(15 downto 0);
     signal int_an                                           : std_logic_vector( 7 downto 0);
     signal int_ca, int_cb, int_cc, int_cd                   : std_logic;
     signal int_ce, int_cf, int_cg, int_dp                   : std_logic;
+    signal count_rst, n_count_rst                           : std_logic_vector( 5 downto 0);
     
     signal dr_sw                                            : std_logic_vector(15 downto 0);
     signal dr_btnc, dr_btnl, dr_btnr, dr_btnu, dr_btnd      : std_logic;
@@ -56,12 +80,35 @@ architecture STRUCTURE of TOP is
     signal dr_ca, dr_cb, dr_cc, dr_cd                       : std_logic;
     signal dr_ce, dr_cf, dr_cg, dr_dp                       : std_logic;
 
-    signal u_board_sw, u_user_sw                            : std_logic_vector(10 downto 0);
+    signal u_board_sw, u_user_sw                            : std_logic_vector(12 downto 0);
     signal u_board_led, u_user_led                          : std_logic_vector( 7 downto 0);
     signal u_board_an, u_user_an                            : std_logic_vector( 3 downto 0);
     signal u_board_seg, u_user_seg                          : std_logic_vector( 7 downto 0);
+    
+    signal LD_o, SW_i                                       : std_logic_vector(15 downto 0);
+    signal AN_o                                             : std_logic_vector(7 downto 0);
+    signal CA_o, CB_o, CC_o, CD_o, CE_o, CF_o, CG_o, DP_o   : std_logic;
+    signal BTNC_i, BTNL_i, BTNR_i, BTNU_i, BTND_i           : std_logic;
+
+    signal capture_1kHz, capture_1MHz                       : std_logic;
+    signal count_1kHz, n_count_1kHz                         : std_logic_vector(16 downto 0);
+    signal count_1MHz, n_count_1MHz                         : std_logic_vector( 6 downto 0);
 
 begin
+    -- external reset (asynchronous)
+    n_int_rst   <= '0'      when count_rst = "111111" else '1';
+    n_count_rst <= "111111" when count_rst = "111111" else count_rst + '1';
+
+    process (CLK, RST_X) begin
+        if (RST_X = '0') then
+            int_rst   <= '1';
+            count_rst <= "000000";
+        elsif (rising_edge(CLK)) then
+            int_rst   <= n_int_rst;
+            count_rst <= n_count_rst;
+        end if;
+    end process;
+
     -- internal register for input/output ports
     int_ld <= dr_ld(15 downto 8) & u_board_led;
     int_an <= dr_an( 7 downto 4) & u_board_an;
@@ -76,23 +123,22 @@ begin
 
     process (CLK) begin
         if (rising_edge(CLK)) then
-            int_rst  <= not RST_X;
-            int_sw   <= SW;
-            int_btnc <= BTNC;
-            int_btnl <= BTNL;
-            int_btnr <= BTNR;
-            int_btnu <= BTNU;
-            int_btnd <= BTND;
-            LD       <= int_ld;
-            AN       <= int_an;
-            CA       <= int_ca;
-            CB       <= int_cb;
-            CC       <= int_cc;
-            CD       <= int_cd;
-            CE       <= int_ce;
-            CF       <= int_cf;
-            CG       <= int_cg;
-            DP       <= int_dp;
+            int_sw    <= SW;
+            int_btnc  <= BTNC;
+            int_btnl  <= BTNL;
+            int_btnr  <= BTNR;
+            int_btnu  <= BTNU;
+            int_btnd  <= BTND;
+            LD_o      <= int_ld;
+            AN_o      <= int_an;
+            CA_o      <= int_ca;
+            CB_o      <= int_cb;
+            CC_o      <= int_cc;
+            CD_o      <= int_cd;
+            CE_o      <= int_ce;
+            CF_o      <= int_cf;
+            CG_o      <= int_cg;
+            DP_o      <= int_dp;
         end if;
     end process;
 
@@ -101,8 +147,8 @@ begin
     dr_btnc <= u_user_sw(9);
     dr_btnl <= u_user_sw(10);
     dr_btnr <= u_user_sw(8);
-    dr_btnu <= int_btnu;
-    dr_btnd <= int_btnd;
+    dr_btnu <= u_user_sw(12);
+    dr_btnd <= u_user_sw(11);
 
     DR : DR_TOP port map (
         SW   => dr_sw,
@@ -125,7 +171,7 @@ begin
         DP   => dr_dp);
 
     -- instantiation of uart_switch
-    u_board_sw <= int_btnl & int_btnc & int_btnr & int_sw(7 downto 0);
+    u_board_sw <= int_btnu & int_btnd & int_btnl & int_btnc & int_btnr & int_sw(7 downto 0);
     u_user_led <= dr_ld(7 downto 0);
     u_user_an  <= dr_an(3 downto 0);
     u_user_seg <= dr_dp & dr_cg & dr_cf & dr_ce & dr_cd & dr_cc & dr_cb & dr_ca;
@@ -143,5 +189,62 @@ begin
         USER_LED  => u_user_led,
         USER_AN   => u_user_an,
         USER_SEG  => u_user_seg);
+
+    -- instantiation of integrated logic analyzer (ILA)
+    LD     <= LD_o;
+    SW_i   <= SW;
+    AN     <= AN_o;
+    CA     <= CA_o;
+    CB     <= CB_o;
+    CC     <= CC_o;
+    CD     <= CD_o;
+    CE     <= CE_o;
+    CF     <= CF_o;
+    CG     <= CG_o;
+    DP     <= DP_o;
+    BTNR_i <= BTNR;
+    BTNC_i <= BTNC;
+    BTNL_i <= BTNL;
+    BTND_i <= BTND;
+    BTNU_i <= BTNU;
+
+    ILA : ila_0 port map (
+        clk     => CLK,
+        probe0  => LD_o,
+        probe1  => SW_i,
+        probe2  => AN_o,
+        probe3  => CA_o,
+        probe4  => CB_o,
+        probe5  => CC_o,
+        probe6  => CD_o,
+        probe7  => CE_o,
+        probe8  => CF_o,
+        probe9  => CG_o,
+        probe10 => DP_o,
+        probe11 => BTNR_i,
+        probe12 => BTNC_i,
+        probe13 => BTNL_i,
+        probe14 => BTND_i,
+        probe15 => BTNU_i,
+        probe16 => capture_1kHz,
+        probe17 => capture_1MHz);
+
+    -- capture signals
+    capture_1kHz <= '0'              when count_1kHz /= 0 else '1';
+    n_count_1kHz <= count_1kHz - '1' when count_1kHz /= 0 else "11000011010011111";
+    capture_1MHz <= '0'              when count_1MHz /= 0 else '1';
+    n_count_1MHz <= count_1MHz - '1' when count_1MHz /= 0 else "1100011";
+
+    process (CLK) begin
+        if (rising_edge(CLK)) then
+            if (int_rst = '1') then
+                count_1kHz <= "11000011010011111"; -- 99,999
+                count_1MHz <= "1100011";           -- 99
+            else
+                count_1kHz <= n_count_1kHz;
+                count_1MHz <= n_count_1MHz;
+            end if;
+        end if;
+    end process;
 
 end STRUCTURE;

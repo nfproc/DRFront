@@ -6,7 +6,7 @@ TOP
  |- DR_TOP (instantiated from TOP as DR): to be reconfigured dynamically
 
 1. Create a Vivado project and synthesize TOP with blank DR_TOP.
-   All VHDL and XDC files, except dr_base.vhdl and dr_blank.vhdl, are used.
+   All VHDL，XCI and XDC files, except dr_base.vhdl and dr_blank.vhdl, are used.
 
 2. Save the design checkpoint (File - Checkpoint - Write).
    The design synthesized in Step 1 has to be opened.

@@ -1,5 +1,5 @@
 -- FPGA RemoCon Project: UART Switch for handshake with PC
--- 2021.11.04 - 2023.01.18 Naoki F., AIT
+-- 2021.11.04 - 2023.07.13 Naoki F., AIT
 ------------------------------------------------------------------------
 library IEEE;
 use IEEE.std_logic_1164.ALL;
@@ -10,11 +10,11 @@ entity uart_switch is
     port ( CLK, RST  : in  std_logic;
            TXD       : out std_logic;
            RXD       : in  std_logic;
-           BOARD_SW  : in  std_logic_vector(10 downto 0);
+           BOARD_SW  : in  std_logic_vector(12 downto 0);
            BOARD_LED : out std_logic_vector( 7 downto 0);
            BOARD_AN  : out std_logic_vector( 3 downto 0);
            BOARD_SEG : out std_logic_vector( 7 downto 0);
-           USER_SW   : out std_logic_vector(10 downto 0);
+           USER_SW   : out std_logic_vector(12 downto 0);
            USER_LED  : in  std_logic_vector( 7 downto 0);
            USER_AN   : in  std_logic_vector( 3 downto 0);
            USER_SEG  : in  std_logic_vector( 7 downto 0));
@@ -45,11 +45,11 @@ architecture RTL of uart_switch is
         generic ( SAMPLE_INT : integer := 1000000;
                   STABLE_INT : integer := 16);    
         port ( CLK, RST  : in  std_logic;
-               BOARD_SW  : in  std_logic_vector(10 downto 0);
+               BOARD_SW  : in  std_logic_vector(12 downto 0);
                BOARD_LED : out std_logic_vector( 7 downto 0);
                BOARD_AN  : out std_logic_vector( 3 downto 0);
                BOARD_SEG : out std_logic_vector( 7 downto 0);
-               USER_SW   : out std_logic_vector(10 downto 0);
+               USER_SW   : out std_logic_vector(12 downto 0);
                USER_LED  : in  std_logic_vector( 7 downto 0);
                USER_AN   : in  std_logic_vector( 3 downto 0);
                USER_SEG  : in  std_logic_vector( 7 downto 0);
@@ -111,7 +111,7 @@ begin
         cont_stop       <= '0';
         trans_rst_reg   <= '0';
         if (state = STATE_INIT) then
-            -- INIT: wait until 1st char of request is received
+            -- INIT: wait until 1st request char is received
             cont_we         <= '0';
             sel_we          <= '1';
             cont_re         <= '1';
@@ -120,10 +120,10 @@ begin
             if (fifo_empty = '0' and fifo_data_out = HELLO_SEND1) then
                 n_state         <= STATE_HELLO1;
             end if;
-        elsif (state = STATE_HELLO1 or state = STATE_HELLO2) then
-            -- HELLO1/HELLO2: wait until next char is received
-            -- send response if 2nd request char, reset translator if reset char
-            -- go back to previous state otherwise
+        elsif (state = STATE_HELLO1) then
+            -- HELLO1 (previous state = INIT): wait until next char is received
+            -- send response and reset translator if 2nd request char comes
+            -- go back to previous state (INIT)   otherwise
             cont_we         <= '0';
             sel_we          <= '1';
             cont_re         <= '1';
@@ -132,14 +132,30 @@ begin
             if (fifo_empty = '0') then
                 if (fifo_data_out = HELLO_SEND2) then
                     n_state         <= STATE_SEND1;
-                elsif (state = STATE_HELLO1) then
-                    n_state         <= STATE_INIT;    -- previous state is INIT'
+                    trans_rst_reg   <= '1';
+                else
+                    n_state         <= STATE_INIT;
+                end if;
+            end if;
+        elsif (state = STATE_HELLO1 or state = STATE_HELLO2) then
+            -- HELLO2 (previous state = READY): wait until next char is received
+            -- send response                  if 2nd request char comes
+            -- reset translator               if reset char comes
+            -- send received char and go back otherwise
+            cont_we         <= '0';
+            sel_we          <= '1';
+            cont_re         <= '1';
+            sel_re          <= '1';
+            cont_stop       <= '1';
+            if (fifo_empty = '0') then
+                if (fifo_data_out = HELLO_SEND2) then
+                    n_state         <= STATE_SEND1;
                 elsif (fifo_data_out = RESET_SEND2) then
                     n_state         <= STATE_READY;
                     trans_rst_reg   <= '1';
                 else
-                    n_state         <= STATE_TRANS;   -- previous state is READY...
-                    n_cont_data_out <= fifo_data_out; -- but received char has to be sent
+                    n_state         <= STATE_TRANS;
+                    n_cont_data_out <= fifo_data_out; -- received char has to be sent
                 end if;
             end if;
         elsif (state = STATE_SEND1 or state = STATE_SEND2) then

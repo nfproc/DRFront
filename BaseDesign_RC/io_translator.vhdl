@@ -1,5 +1,5 @@
 -- FPGA RemoCon Project: translation between I/O and command string
--- 2023.02.24 Naoki F., AIT
+-- 2023.07.06 Naoki F., AIT
 ------------------------------------------------------------------------
 library IEEE;
 use IEEE.std_logic_1164.ALL;
@@ -9,11 +9,11 @@ entity io_translator is
     generic ( SAMPLE_INT : integer := 1000000; -- sampling interval of 7-seg output
               STABLE_INT : integer := 16);     -- cycles to see if 7-seg input is stable
     port ( CLK, RST  : in  std_logic;
-           BOARD_SW  : in  std_logic_vector(10 downto 0);   -- switch input of board
+           BOARD_SW  : in  std_logic_vector(12 downto 0);   -- switch input of board
            BOARD_LED : out std_logic_vector( 7 downto 0);   -- LED output of board
            BOARD_AN  : out std_logic_vector( 3 downto 0);   -- 7-seg anode of board
            BOARD_SEG : out std_logic_vector( 7 downto 0);   -- 7-seg segment of board
-           USER_SW   : out std_logic_vector(10 downto 0);   -- switch input of user circuit
+           USER_SW   : out std_logic_vector(12 downto 0);   -- switch input of user circuit
            USER_LED  : in  std_logic_vector( 7 downto 0);   -- LED output of user circuit
            USER_AN   : in  std_logic_vector( 3 downto 0);   -- 7-seg anode of user circuit
            USER_SEG  : in  std_logic_vector( 7 downto 0);   -- 7-seg segment of user circuit
@@ -45,8 +45,8 @@ architecture RTL of io_translator is
     end component;
 
     signal recv_first_char : std_logic;                     -- '1' after receiving 1st char
-    signal user_sw_reg     : std_logic_vector(10 downto 0); -- stored USER_SW value
-    signal user_sw_sel     : integer range 0 to 10;         -- index of selected SW
+    signal user_sw_reg     : std_logic_vector(12 downto 0); -- stored USER_SW value
+    signal user_sw_sel     : integer range 0 to 12;         -- index of selected SW
     signal sent_led_char   : std_logic;                     -- '1' when LED group select is sent
     signal next_led_char   : std_logic_vector( 7 downto 0); -- char to be sent for turning LED on/off
     signal user_led_val    : std_logic_vector(39 downto 0); -- concatenation of LED and 7-seg values
@@ -99,6 +99,8 @@ begin
                     when x"51" => user_sw_sel <= 8;  -- Q
                     when x"52" => user_sw_sel <= 9;  -- R
                     when x"53" => user_sw_sel <= 10; -- S
+                    when x"71" => user_sw_sel <= 11; -- q
+                    when x"72" => user_sw_sel <= 12; -- r
                     -- when large U, turn the selected SW on
                     when x"55" => user_sw_reg(user_sw_sel) <= '1';
                     -- when small u, turn the selected SW off

@@ -301,5 +301,41 @@ namespace DRFront
                 MsgBox.Warn("トップ回路の移動中にエラーが発生しました．\n" + ex.Message);
             }
         }
+
+        // ユーザ回路のポート一覧が変更されていないかを確認する
+        private bool CheckUserPortModified()
+        {
+            bool modified = false;
+            TopEntityFinder newTop = new TopEntityFinder(SourceFileNames);
+            if (! newTop.IsValid)
+            {
+                MsgBox.Warn("更新されたソースファイルに問題があります．\n" + newTop.Problem);
+                return false;
+            }
+            if (newTop.TopEntity != TopFinder.TopEntity)
+                if (! newTop.SetTopEntity(TopFinder.TopEntity))
+                {
+                    MsgBox.Warn("更新されたソースファイルに問題があります．\nエンティティ " + TopFinder.TopEntity + " が見つかりません．");
+                    return false;
+                }
+                    
+            if (newTop.TopPorts.Count != TopFinder.TopPorts.Count)
+                modified = true;
+            else
+                for (int i = 0; i < newTop.TopPorts.Count; i++)
+                    if (newTop.TopPorts[i].ToString() != TopFinder.TopPorts[i].ToString())
+                        modified = true;
+
+            if (modified)
+            {
+                if (! MsgBox.WarnAndConfirm("ユーザ回路が更新されているようです．トップ回路を再生成して続行しますか？"))
+                    return false;
+                TopFinder = newTop;
+                ReadTopVHDL(VM.CurrentProject);
+                UpdateUserPorts();
+                GenerateTopVHDL(VM.CurrentProject);
+            }
+            return true;
+        }
     }
 }

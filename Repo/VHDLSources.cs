@@ -289,10 +289,10 @@ namespace DRFront
         }
 
         // ユーザ回路のトップを変更し，入出力ポートの一覧を更新する
-        public void SetTopEntity(string top, bool preserveAssignment = false)
+        public bool SetTopEntity(string top, bool preserveAssignment = false)
         {
             if (! Ports.ContainsKey(top.ToLower()))
-                return;
+                return false;
             TopEntity = top;
             TopPorts = Ports[TopEntity.ToLower()];
             TopPorts.Sort((a, b) => a.Name.CompareTo(b.Name));
@@ -309,6 +309,7 @@ namespace DRFront
                         AddUserPorts(new VHDLPort(port.OriginalName + "(" + i + ")", port.Direction), oldAssignments);
                 else
                     AddUserPorts(new VHDLPort(port.OriginalName, port.Direction), oldAssignments);
+            return true;
         }
 
         // 入出力ポートの一覧にポートを追加

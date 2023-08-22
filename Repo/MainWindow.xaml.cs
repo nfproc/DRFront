@@ -87,12 +87,23 @@ namespace DRFront
             if (Directory.Exists(VM.SourceDirPath))
                 dialog.SelectedPath = VM.SourceDirPath;
             if ((bool) dialog.ShowDialog())
-                VM.SourceDirPath = dialog.SelectedPath;
+            {
+                if (VM.SourceDirPath == dialog.SelectedPath)
+                {
+                    LastSourceDir = "";
+                    CheckSourceDirectory();
+                }
+                else
+                {
+                    VM.SourceDirPath = dialog.SelectedPath;
+                }
+            }
         }
 
         // ソースディレクトリを再チェックするボタンが押されたとき
         private void Refresh_Click(object sender, RoutedEventArgs e)
         {
+            LastSourceDir = "";
             CheckSourceDirectory();
 
         }
@@ -217,6 +228,8 @@ namespace DRFront
         {
             if (! CheckProjectVersion(VM.CurrentProject))
                 return;
+            if (! CheckUserPortModified())
+                return;
 
             // ログを保存するフォルダ（なければ作成）
             if (!Directory.Exists(VM.SourceDirPath + @"\" + VM.CurrentProject + @"\logs"))
@@ -241,6 +254,7 @@ namespace DRFront
             Dictionary<string, string> argsGen = new Dictionary<string, string>();
 
             argsGen.Add("project_name", VM.CurrentProject);
+            argsGen.Add("top_module_name", TopFinder.TopEntity);
             argsGen.Add("checkpoint_base", FileName.BaseCheckPoint);
             argsGen.Add("checkpoint_proj", FileName.UserCheckPoint);
             PrepareTcl(VM.CurrentProject, FileName.BitGenTCL, Properties.Resources.GENERATE_BITSTREAM, argsGen);
@@ -282,13 +296,29 @@ namespace DRFront
         {
             string tclFile = null;
             string senderName = ((Button)sender).Name;
+            string projDir = VM.SourceDirPath + @"\" + VM.CurrentProject;
             bool useBatchMode = (senderName == "btnBitGen");
+            List<string> srcs = SourceFileNames;
+            List<string> dcps = EnumerateVivadoFiles(projDir, "DCPFileExceptBase", true);
+            List<string> bits = EnumerateVivadoFiles(projDir, "BITFile", true);
+
             if (senderName == "btnOpenProject")
+            {
                 tclFile = FileName.OpenProjectTCL;
+            }
             else if (senderName == "btnBitGen")
+            {
                 tclFile = FileName.BitGenTCL;
+                if (! CheckVivadoFilesStale(dcps, srcs, "チェックポイント", "ソースファイル"))
+                    return;
+            }
             else if (senderName == "btnOpenHW")
+            {
                 tclFile = FileName.OpenHWTCL;
+                if (! CheckVivadoFilesStale(bits, srcs, "ビットストリーム", "ソースファイル") ||
+                    ! CheckVivadoFilesStale(bits, dcps, "ビットストリーム", "チェックポイント"))
+                    return;
+            }
             else
                 return;
 

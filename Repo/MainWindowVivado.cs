@@ -43,6 +43,11 @@ namespace DRFront
                 MsgBox.Warn("Vivado が見つからないため，起動できません．");
                 return false;
             }
+            if (VM.IsSourceValid && VM.SourceProblem != "")
+            {
+                if (! MsgBox.WarnAndConfirm(VM.SourceProblem + "\n続行しますか？"))
+                    return false;
+            }
             if (VivadoLastLaunched != null)
             {
                 TimeSpan ts = DateTime.Now - VivadoLastLaunched;
@@ -113,7 +118,7 @@ namespace DRFront
         private bool CheckTclVersion(string project, string tclFile)
         {
             int ver = GetTclVersion(project, tclFile);
-            if (ver == -1 || ver >= 300) // 0.3.0 以上なら OK
+            if (ver == -1 || ver >= 301) // 0.3.1 以上なら OK
                 return true;
 
             string warnMessage = "Vivado 用のスクリプトが，過去の DRFront で作成されたもののようです．\n"

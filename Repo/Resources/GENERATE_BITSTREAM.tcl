@@ -42,7 +42,7 @@ read_checkpoint -cell [get_cells DR] $checkpoint_proj
 opt_design
 place_design
 route_design
-write_bitstream -force ${project_name}.bit
+write_bitstream -force ${top_module_name}_${project_name}.bit
 close_project
 
 if { $script_mode ne "gui" } {
