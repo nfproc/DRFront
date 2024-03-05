@@ -58,7 +58,11 @@ namespace DRFront
         public MainWindow()
         {
             InitializeComponent();
-            BaseDir = Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory) + "\\";
+            string baseDirOrNull = Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory);
+            if (baseDirOrNull != null)
+                BaseDir = baseDirOrNull + "\\";
+            else
+                BaseDir = AppDomain.CurrentDomain.BaseDirectory;
 
             VM = new MainViewModel();
             DataContext = VM;
