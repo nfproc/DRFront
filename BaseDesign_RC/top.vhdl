@@ -1,5 +1,5 @@
--- FPGA RemoCon Project: Top module for DRFront
--- 2022.07.13 Naoki F., AIT
+-- FPGA RemoCon Project: Top module for DRFront (Nexys)
+-- 2024.03.15 Naoki F., AIT
 ------------------------------------------------------------------------
 library IEEE;
 use IEEE.std_logic_1164.ALL;
@@ -85,10 +85,9 @@ architecture STRUCTURE of TOP is
     signal u_board_an, u_user_an                            : std_logic_vector( 3 downto 0);
     signal u_board_seg, u_user_seg                          : std_logic_vector( 7 downto 0);
     
-    signal LD_o, SW_i                                       : std_logic_vector(15 downto 0);
+    signal LD_o                                             : std_logic_vector(15 downto 0);
     signal AN_o                                             : std_logic_vector(7 downto 0);
     signal CA_o, CB_o, CC_o, CD_o, CE_o, CF_o, CG_o, DP_o   : std_logic;
-    signal BTNC_i, BTNL_i, BTNR_i, BTNU_i, BTND_i           : std_logic;
 
     signal capture_1kHz, capture_1MHz                       : std_logic;
     signal count_1kHz, n_count_1kHz                         : std_logic_vector(16 downto 0);
@@ -190,9 +189,8 @@ begin
         USER_AN   => u_user_an,
         USER_SEG  => u_user_seg);
 
-    -- instantiation of integrated logic analyzer (ILA)
+    -- board output
     LD     <= LD_o;
-    SW_i   <= SW;
     AN     <= AN_o;
     CA     <= CA_o;
     CB     <= CB_o;
@@ -202,30 +200,26 @@ begin
     CF     <= CF_o;
     CG     <= CG_o;
     DP     <= DP_o;
-    BTNR_i <= BTNR;
-    BTNC_i <= BTNC;
-    BTNL_i <= BTNL;
-    BTND_i <= BTND;
-    BTNU_i <= BTNU;
 
+    -- instantiation of integrated logic analyzer (ILA)
     ILA : ila_0 port map (
         clk     => CLK,
-        probe0  => LD_o,
-        probe1  => SW_i,
-        probe2  => AN_o,
-        probe3  => CA_o,
-        probe4  => CB_o,
-        probe5  => CC_o,
-        probe6  => CD_o,
-        probe7  => CE_o,
-        probe8  => CF_o,
-        probe9  => CG_o,
-        probe10 => DP_o,
-        probe11 => BTNR_i,
-        probe12 => BTNC_i,
-        probe13 => BTNL_i,
-        probe14 => BTND_i,
-        probe15 => BTNU_i,
+        probe0  => dr_ld,
+        probe1  => dr_sw,
+        probe2  => dr_an,
+        probe3  => dr_ca,
+        probe4  => dr_cb,
+        probe5  => dr_cc,
+        probe6  => dr_cd,
+        probe7  => dr_ce,
+        probe8  => dr_cf,
+        probe9  => dr_cg,
+        probe10 => dr_dp,
+        probe11 => dr_btnr,
+        probe12 => dr_btnc,
+        probe13 => dr_btnl,
+        probe14 => dr_btnd,
+        probe15 => dr_btnu,
         probe16 => capture_1kHz,
         probe17 => capture_1MHz);
 

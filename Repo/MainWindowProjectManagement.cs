@@ -1,5 +1,5 @@
 ﻿// DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
-// Copyright (C) 2022-2023 Naoki FUJIEDA. New BSD License is applied.
+// Copyright (C) 2022-2024 Naoki FUJIEDA. New BSD License is applied.
 //**********************************************************************
 
 using System;
@@ -120,7 +120,10 @@ namespace DRFront
             VHDLUserPorts = TopFinder.TopPorts;
             VM.UserPorts.Clear();
             foreach (VHDLPort port in TopFinder.UserPorts)
-                VM.UserPorts.Add(new UserPortItem(port.OriginalName, port.Direction, port.ToAssign));
+            {
+                List<string> portList = (port.Direction == "Input") ? InputPortList : OutputPortList;
+                VM.UserPorts.Add(new UserPortItem(port.OriginalName, port.Direction, portList, port.ToAssign));
+            }
             UpdateComponentRectangles();
         }
 
@@ -193,10 +196,10 @@ namespace DRFront
                 FileName.LogFolder.ToLower()
             };
             string projectVersion = GetProjectVersion(project);
-            if (projectVersion != null && VivadoVersion != null && projectVersion != VivadoVersion)
+            if (projectVersion != null && ST.VivadoVersion != null && projectVersion != ST.VivadoVersion)
             {
                 string warnMessage = "Vivado のバージョンが一致しません．\n"
-                    + "この PC の Vivado バージョン: " + VivadoVersion + "\n"
+                    + "この PC の Vivado バージョン: " + ST.VivadoVersion + "\n"
                     + "プロジェクトの Vivado バージョン: " + projectVersion + "\n"
                     + "Vivado が作成したファイルを削除して続行しますか？";
                 if (!MsgBox.WarnAndConfirm(warnMessage))
@@ -297,8 +300,7 @@ namespace DRFront
         // ベースデザインの dcp ファイルのある場所を返す
         private string GetBaseCheckpointName()
         {
-            string baseDir = Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory) + @"\";
-            List<string> baseNames = EnumerateVivadoFiles(baseDir, "DCPFile");
+            List<string> baseNames = EnumerateVivadoFiles(BaseDir + FileName.BoardsDir + ST.TargetBoardDir, "DCPFile");
 
             if (baseNames.Count == 0)
                 return "";
@@ -307,7 +309,7 @@ namespace DRFront
                     baseNames[baseNames.Count - 1] + "を使用します．\n続行しますか？"))
                     return "";
 
-            return baseDir + baseNames[baseNames.Count - 1];
+            return BaseDir + FileName.BoardsDir + ST.TargetBoardDir + "\\" + baseNames[baseNames.Count - 1];
         }
 
         // プロジェクトや dcp が複数ある場合の名前比較用メソッドを実装するクラス

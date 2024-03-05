@@ -25,9 +25,6 @@ namespace eval _tcl {
   }
 }
 
-set target_fpga xc7a100tcsg324-1
-set target_board digilentinc.com:nexys-a7-100t:part0:1.0
-
 if { [ file exists ${project_name}.xpr ] == 1 } {
   # Open Project
   common::send_msg_id "DRFront-003" "INFO" "Project file exists. Opening the project..."

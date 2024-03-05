@@ -1,5 +1,5 @@
 ﻿// DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
-// Copyright (C) 2022-2023 Naoki FUJIEDA. New BSD License is applied.
+// Copyright (C) 2022-2024 Naoki FUJIEDA. New BSD License is applied.
 //**********************************************************************
 
 using System;
@@ -16,31 +16,17 @@ namespace DRFront
     // ■■ Vivado の起動等に関するメソッド ■■
     public partial class MainWindow : Window
     {
-        // Vivado のバージョンチェックを行う
-        private string CheckVivadoVersion()
-        {
-            DirectoryInfo vivadoRoot = new DirectoryInfo(VivadoRootPath);
-            List<string> versions = new List<string>();
-            if (! vivadoRoot.Exists)
-                return null;
-
-            foreach (DirectoryInfo subDir in vivadoRoot.GetDirectories())
-                if (subDir.GetFiles("settings64.bat").Length != 0)
-                    versions.Add(subDir.Name);
-
-            if (versions.Count == 0)
-                return null;
-
-            versions.Sort();
-            return versions[versions.Count - 1];
-        }
-
         // Vivado の起動準備が整っているか確認
         private bool CheckForLaunchVivado()
         {
-            if (VivadoVersion == null)
+            List<string> vers = Util.GetVivadoVersions(ST.VivadoRootPath);
+            if (ST.VivadoVersion == null || ! vers.Contains(ST.VivadoVersion))
             {
-                MsgBox.Warn("Vivado が見つからないため，起動できません．");
+                string findDir = ST.VivadoRootPath;
+                if (ST.VivadoVersion != null)
+                    findDir += ST.VivadoVersion;
+                MsgBox.Warn("Vivado が " + findDir + " に見つかりませんでした．\n"
+                    + "Vivado がインストールされている場合は，環境設定を確認してください．");
                 return false;
             }
             if (VM.IsSourceValid && VM.SourceProblem != "")
@@ -118,7 +104,7 @@ namespace DRFront
         private bool CheckTclVersion(string project, string tclFile)
         {
             int ver = GetTclVersion(project, tclFile);
-            if (ver == -1 || ver >= 301) // 0.3.1 以上なら OK
+            if (ver == -1 || ver >= 400) // 0.4.0 以上なら OK
                 return true;
 
             string warnMessage = "Vivado 用のスクリプトが，過去の DRFront で作成されたもののようです．\n"
@@ -135,7 +121,7 @@ namespace DRFront
             try
             {
                 string vivadoMode = (batchMode) ? "batch" : "tcl";
-                string vivadoDir = VivadoRootPath + VivadoVersion;
+                string vivadoDir = ST.VivadoRootPath + ST.VivadoVersion;
                 p.StartInfo.FileName = vivadoDir + @"\bin\vivado.bat";
                 p.StartInfo.UseShellExecute = false;
                 p.StartInfo.CreateNoWindow = false; // あえてコマンドプロンプトを表示させる

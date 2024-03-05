@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<DRFrontBoardDefinition xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <TargetFPGA>xc7a100tcsg324-1</TargetFPGA>
+  <TargetBoard>digilentinc.com:nexys-a7-100t:part0:1.0</TargetBoard>
+  <BoardImage path="Nexys.jpg" width="600" height="320" />
+  <Component name="SW(0)" left="538" top="256" width="30" height="60" />
+  <Component name="SW(1)" left="505" top="256" width="30" height="60" />
+  <Component name="SW(2)" left="471" top="256" width="30" height="60" />
+  <Component name="SW(3)" left="438" top="256" width="30" height="60" />
+  <Component name="SW(4)" left="404" top="256" width="30" height="60" />
+  <Component name="SW(5)" left="371" top="256" width="30" height="60" />
+  <Component name="SW(6)" left="337" top="256" width="30" height="60" />
+  <Component name="SW(7)" left="304" top="256" width="30" height="60" />
+  <Component name="SW(8)" left="270" top="256" width="30" height="60" />
+  <Component name="SW(9)" left="237" top="256" width="30" height="60" />
+  <Component name="SW(10)" left="203" top="256" width="30" height="60" />
+  <Component name="SW(11)" left="170" top="256" width="30" height="60" />
+  <Component name="SW(12)" left="136" top="256" width="30" height="60" />
+  <Component name="SW(13)" left="103" top="256" width="30" height="60" />
+  <Component name="SW(14)" left="69" top="256" width="30" height="60" />
+  <Component name="SW(15)" left="36" top="256" width="30" height="60" />
+  <Component name="LD(0)" left="525" top="216" width="30" height="25" default="'0'" />
+  <Component name="LD(1)" left="493" top="216" width="30" height="25" default="'0'" />
+  <Component name="LD(2)" left="461" top="216" width="30" height="25" default="'0'" />
+  <Component name="LD(3)" left="429" top="216" width="30" height="25" default="'0'" />
+  <Component name="LD(4)" left="397" top="216" width="30" height="25" default="'0'" />
+  <Component name="LD(5)" left="365" top="216" width="30" height="25" default="'0'" />
+  <Component name="LD(6)" left="333" top="216" width="30" height="25" default="'0'" />
+  <Component name="LD(7)" left="301" top="216" width="30" height="25" default="'0'" />
+  <Component name="LD(8)" left="269" top="216" width="30" height="25" default="'0'" />
+  <Component name="LD(9)" left="237" top="216" width="30" height="25" default="'0'" />
+  <Component name="LD(10)" left="205" top="216" width="30" height="25" default="'0'" />
+  <Component name="LD(11)" left="173" top="216" width="30" height="25" default="'0'" />
+  <Component name="LD(12)" left="141" top="216" width="30" height="25" default="'0'" />
+  <Component name="LD(13)" left="109" top="216" width="30" height="25" default="'0'" />
+  <Component name="LD(14)" left="77" top="216" width="30" height="25" default="'0'" />
+  <Component name="LD(15)" left="45" top="216" width="30" height="25" default="'0'" />
+  <Component name="AN(0)" left="390" top="166" width="38" height="50" default="'1'" />
+  <Component name="AN(1)" left="349" top="166" width="38" height="50" default="'1'" />
+  <Component name="AN(2)" left="308" top="166" width="38" height="50" default="'1'" />
+  <Component name="AN(3)" left="267" top="166" width="38" height="50" default="'1'" />
+  <Component name="AN(4)" left="220" top="166" width="38" height="50" default="'1'" />
+  <Component name="AN(5)" left="179" top="166" width="38" height="50" default="'1'" />
+  <Component name="AN(6)" left="138" top="166" width="38" height="50" default="'1'" />
+  <Component name="AN(7)" left="97" top="166" width="38" height="50" default="'1'" />
+  <Component name="CLK" left="219" top="18" width="32" height="32" />
+  <Component name="RST" left="349" top="18" width="32" height="32" />
+  <Component name="CA" left="120" top="17" width="60" height="20" default="'1'" />
+  <Component name="CB" left="150" top="38" width="30" height="32" default="'1'" />
+  <Component name="CC" left="140" top="92" width="30" height="32" default="'1'" />
+  <Component name="CD" left="100" top="125" width="58" height="20" default="'1'" />
+  <Component name="CE" left="100" top="92" width="30" height="32" default="'1'" />
+  <Component name="CF" left="110" top="38" width="30" height="32" default="'1'" />
+  <Component name="CG" left="110" top="71" width="60" height="20" default="'1'" />
+  <Component name="DP" left="160" top="125" width="20" height="20" default="'1'" />
+  <Component name="BTNU" left="448" top="40" width="40" height="40" />
+  <Component name="BTNL" left="403" top="84" width="40" height="40" />
+  <Component name="BTNC" left="448" top="84" width="40" height="40" />
+  <Component name="BTNR" left="493" top="84" width="40" height="40" />
+  <Component name="BTND" left="448" top="128" width="40" height="40" />
+</DRFrontBoardDefinition>

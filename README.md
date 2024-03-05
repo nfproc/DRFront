@@ -1,6 +1,6 @@
 DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
 ============================================================
-Copyright (C) 2022-2023 Naoki FUJIEDA. All rights reserved.
+Copyright (C) 2022-2024 Naoki FUJIEDA. All rights reserved.
 
 ### 概要
 
@@ -9,12 +9,12 @@ FPGAの一部分をユーザが書き換える形でディジタル回路の設�
 します．現時点では，Digilent社のNexys A7-100Tボードのみを対象としています．
 
 配布パッケージのダウンロード:
-<a href="https://aitech.ac.jp/~dslab/nf/DRFront/DRFront_dist_v0_3_1.zip">
-ZIP</a> (3.92 MiB)
+<a href="https://aitech.ac.jp/~dslab/nf/DRFront/DRFront_dist_v0_4_0.zip">
+ZIP</a> (3.81 MiB)
 
 ### 配布パッケージの内容:
+- Boards/               : ボード定義（ベース設計のチェックポイントを含む）
 - sources/              : プログラムのソースコード
-- rc_base.dcp           : ベース設計の Vivado のチェックポイント
 - COPYING               : 著作権表記
 - DRFront.exe           : DRFront 本体
 - README.md             : このファイル
@@ -22,7 +22,7 @@ ZIP</a> (3.92 MiB)
 
 ### 動作環境
 Windows 10 以降 + .NET Framework 4.8
-（最新の Windows 10 で動作確認済）
+（最新の Windows 10, Windows 11 で動作確認済）
 
 DRFront.exe が非ASCII文字（全角文字など）を含む箇所にあると，Vivado が
 正しく動作しません．VHDL のソースディレクトリについても同様です．
@@ -75,6 +75,10 @@ Vivado からスクリプトを読み込ませて操作することも可能で�
 に保存されている，OpenProject.tcl，GenerateBitstream.tcl，OpenHW.tcl を，
 それぞれ Tool → Run Tcl Script から実行してください．
 
+Vivado がデフォルトのインストール先（`c:\Xilinx\Vivado`）以外にある場合，
+あるいは複数のバージョンの Vivado がインストールされている場合，Setting
+ボタンから，Vivado のインストール先やバージョンを指定してください．
+
 ### 注意事項
 トップモジュールやそのポート名は極力自動で認識するようプログラミングして
 いますが，以下の前提があります．前提に基づかない記述がある場合，これらが
@@ -94,6 +98,12 @@ Ookii Dialogs は New BSD ライセンスに従って DLL ファイルを再配�
 す．詳細は COPYING ファイルを参照してください．
 
 ### 更新履歴
+- v0.4.0 2024-03-05
+  - Vivado のインストール先や使用するバージョンを，手動で指定する機能を
+    追加．
+  - ボード定義を外部ファイルに置くように変更し，将来的に Nexys A7-100T
+    以外のボードにも対応できるように改良．
+
 - v0.3.1 2023-08-22
   - Create/Update Files ボタンを押した際，ユーザ回路のトップモジュールに
     変更がないかチェックする機能を追加．

@@ -1,5 +1,5 @@
 ﻿// DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
-// Copyright (C) 2022-2023 Naoki FUJIEDA. New BSD License is applied.
+// Copyright (C) 2022-2024 Naoki FUJIEDA. New BSD License is applied.
 //**********************************************************************
 
 using System.Collections.Generic;
@@ -81,7 +81,7 @@ namespace DRFront
                 result.Add(rect.Key, new List<string>());
 
             foreach (var port in VM.UserPorts)
-                if (port.TopPort != "")
+                if (port.TopPort != "" && result.ContainsKey(port.TopPort))
                     result[port.TopPort].Add(port.Name);
 
             return result;
@@ -263,7 +263,7 @@ namespace DRFront
                         string usr = match.Groups[1].Value;
                         string top = match.Groups[2].Value;
                         foreach (VHDLPort port in TopFinder.UserPorts)
-                            if (port.Name == usr.ToLower())
+                            if (port.Name == usr.ToLower() && ComponentRectangles.ContainsKey(top))
                                 port.ToAssign = top;
                     }
                 }

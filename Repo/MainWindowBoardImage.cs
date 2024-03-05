@@ -1,12 +1,16 @@
 ﻿// DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
-// Copyright (C) 2022-2023 Naoki FUJIEDA. New BSD License is applied.
+// Copyright (C) 2022-2024 Naoki FUJIEDA. New BSD License is applied.
 //**********************************************************************
 
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Xml.Serialization;
 
 namespace DRFront
 {
@@ -16,42 +20,77 @@ namespace DRFront
         // ボード画像上に配置される枠のセットアップ
         private void SetupComponentRects()
         {
+            DRFrontBoardDefinition board;
+            string boardDir = BaseDir + FileName.BoardsDir + ST.TargetBoardDir + "\\";
+
+            // 初期化処理
+            cvsBoard.Children.Clear();
+            if (ComponentRectangles == null)
+            {
+                ComponentRectangles = new Dictionary<string, Rectangle>();
+                InputPortList = new List<string>();
+                OutputPortList = new List<string>();
+            }                
+            else
+            {
+                ComponentRectangles.Clear();
+                InputPortList.Clear();
+                OutputPortList.Clear();
+            }
+            InputPortList.Add("");
+            OutputPortList.Add("");
+
+            // ボード定義ファイルを読み込む
+            try
+            {
+                XmlSerializer serial = new XmlSerializer(typeof(DRFrontBoardDefinition));
+                FileStream fs = new FileStream(boardDir + "board.xml", FileMode.Open);
+                board = (DRFrontBoardDefinition)serial.Deserialize(fs);
+                fs.Close();
+            }
+            catch (Exception ex)
+            {
+                MsgBox.Warn("ボードファイルのロードに失敗しました．\n\n" +
+                    "エラー内容: " + ex.Message);
+                return;
+            }
+
             ComponentLocations = new Dictionary<string, Rect>();
             ComponentDefaults = new Dictionary<string, string>();
-            for (int i = 0; i < 16; i += 1)
+
+            TargetFPGA = board.TargetFPGA;
+            TargetBoardName = board.TargetBoard;
+            foreach (DRFrontBoardDefinition.DRFrontBoardComponent comp in board.Components)
             {
-                ComponentLocations.Add("SW(" + i + ")", new Rect(538 - 33.5 * i, 256, 30, 60));
-                ComponentLocations.Add("LD(" + i + ")", new Rect(525 - 32   * i, 216, 30, 25));
-                ComponentDefaults.Add ("LD(" + i + ")", "'0'");
+                ComponentLocations.Add(comp.Name, new Rect(comp.Left, comp.Top, comp.Width, comp.Height));
+                if (comp.DefaultValue != null)
+                {
+                    ComponentDefaults.Add(comp.Name, comp.DefaultValue);
+                    OutputPortList.Add(comp.Name);
+                }
+                else
+                {
+                    InputPortList.Add(comp.Name);
+                }
             }
-            for (int i = 0; i < 4; i += 1)
-            {
-                ComponentLocations.Add("AN(" +  i      + ")", new Rect(390 - 41 * i, 166, 38, 50));
-                ComponentLocations.Add("AN(" + (i + 4) + ")", new Rect(220 - 41 * i, 166, 38, 50));
-            }
-            for (int i = 0; i < 8; i += 1)
-                ComponentDefaults.Add ("AN(" +  i + ")", "'1'");
+            // 存在しなくなったポートへの割り当てを解除
+            foreach (UserPortItem port in VM.UserPorts)
+                if (! port.TopPortList.Contains(port.TopPort))
+                    port.TopPort = "";
 
-            ComponentLocations.Add("CLK",  new Rect(219,  18, 32, 32));
-            ComponentLocations.Add("RST",  new Rect(349,  18, 32, 32));
-            ComponentLocations.Add("CA",   new Rect(120,  17, 60, 20));
-            ComponentLocations.Add("CB",   new Rect(150,  38, 30, 32));
-            ComponentLocations.Add("CC",   new Rect(140,  92, 30, 32));
-            ComponentLocations.Add("CD",   new Rect(100, 125, 58, 20));
-            ComponentLocations.Add("CE",   new Rect(100,  92, 30, 32));
-            ComponentLocations.Add("CF",   new Rect(110,  38, 30, 32));
-            ComponentLocations.Add("CG",   new Rect(110,  71, 60, 20));
-            ComponentLocations.Add("DP",   new Rect(160, 125, 20, 20));
-            ComponentLocations.Add("BTNU", new Rect(448,  40, 40, 40));
-            ComponentLocations.Add("BTNL", new Rect(403,  84, 40, 40));
-            ComponentLocations.Add("BTNC", new Rect(448,  84, 40, 40));
-            ComponentLocations.Add("BTNR", new Rect(493,  84, 40, 40));
-            ComponentLocations.Add("BTND", new Rect(448, 128, 40, 40));
+            // 背景画像を表示
+            BitmapImage newBMP = new BitmapImage();
+            newBMP.BeginInit();
+            newBMP.CacheOption = BitmapCacheOption.OnLoad;
+            newBMP.UriSource = new Uri(boardDir + board.BoardImage.Path);
+            newBMP.EndInit();
+            Image newImage = new Image();
+            newImage.Source = newBMP;
+            newImage.Width = board.BoardImage.Width;
+            newImage.Height = board.BoardImage.Height;
+            cvsBoard.Children.Add(newImage);
 
-            foreach (string port in new List<string> { "CA", "CB", "CC", "CD", "CE", "CF", "CG", "DP" })
-                ComponentDefaults.Add(port, "'1'");
-
-            ComponentRectangles = new Dictionary<string, Rectangle>();
+            // 重ね合わせる枠を表示
             SolidColorBrush fillRect = new SolidColorBrush(Color.FromArgb(0, 255, 255, 255));
             foreach (var loc in ComponentLocations)
             {
@@ -109,5 +148,29 @@ namespace DRFront
                     return loc.Key;
             return "";
         }
+    }
+
+    // ボード定義ファイルの XML に対応したクラス
+    public class DRFrontBoardDefinition
+    {
+        public string TargetFPGA;
+        public string TargetBoard;
+        public class DRFrontBoardImage
+        {
+            [XmlAttribute("path")]   public string Path;
+            [XmlAttribute("width")]  public int Width;
+            [XmlAttribute("height")] public int Height;
+        }
+        public DRFrontBoardImage BoardImage;
+        public class DRFrontBoardComponent
+        {
+            [XmlAttribute("name")]    public string Name;
+            [XmlAttribute("left")]    public int Left;
+            [XmlAttribute("top")]     public int Top;
+            [XmlAttribute("width")]   public int Width;
+            [XmlAttribute("height")]  public int Height;
+            [XmlAttribute("default")] public string DefaultValue;
+        }
+        [XmlElement("Component")] public List<DRFrontBoardComponent> Components;
     }
 }

@@ -1,5 +1,5 @@
 ﻿// DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
-// Copyright (C) 2022-2023 Naoki FUJIEDA. New BSD License is applied.
+// Copyright (C) 2022-2024 Naoki FUJIEDA. New BSD License is applied.
 //**********************************************************************
 
 using System.IO;
@@ -14,6 +14,7 @@ using System;
 using Ookii.Dialogs.Wpf;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Path = System.IO.Path;
 
 namespace DRFront
 {
@@ -21,18 +22,20 @@ namespace DRFront
     public partial class MainWindow : Window
     {
         private MainViewModel VM;
+        private DRFrontSettings ST;
         private TopEntityFinder TopFinder;
         private Dictionary<string, Rect> ComponentLocations;
         private Dictionary<string, Rectangle> ComponentRectangles;
         private Dictionary<string, string> ComponentDefaults;
         private List<VHDLPort> VHDLUserPorts;
+        private List<string> InputPortList, OutputPortList;
         private string SelectedRectangleName = "";
         private bool ProjectListUpdating = false;
 
+        private string BaseDir;
         private string DRFrontVersion;
-        private string VivadoVersion;
         private DateTime VivadoLastLaunched;
-        private const string VivadoRootPath = @"C:\Xilinx\Vivado\";
+        private string TargetFPGA, TargetBoardName;
         private List<string> SourceFileNames;
         private const string NewProjectLabel = "(New Project)";
         private string LastSourceDir = "";
@@ -48,15 +51,19 @@ namespace DRFront
             public const string BitGenTCL = "GenerateBitstream.tcl";
             public const string OpenHWTCL = "OpenHW.tcl";
             public const string LogFolder = "logs";
+            public const string BoardsDir = "boards\\";
+            public const string Settings = "setting.xml";
         }
 
         public MainWindow()
         {
             InitializeComponent();
-            SetupComponentRects();
+            BaseDir = Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory) + "\\";
 
             VM = new MainViewModel();
             DataContext = VM;
+            ST = new DRFrontSettings();
+            ST.Load(BaseDir + FileName.Settings);
 
             SourceFileNames = new List<string>();
             updateTimer = new DispatcherTimer();
@@ -65,10 +72,7 @@ namespace DRFront
 
             string version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
             DRFrontVersion = Regex.Replace(version, @".[0-9]+$", "");
-
-            VivadoVersion = CheckVivadoVersion();
-            if (VivadoVersion == null)
-                MsgBox.Warn("Vivado が見つかりませんでした．\nVivado を使用する機能は動作しません．");
+            SetupComponentRects();
         }
 
         // ソースディレクトリが変更されたとき（新しいディレクトリに対してチェックを行う）
@@ -150,7 +154,23 @@ namespace DRFront
                 UpdateUserPorts();
                 GenerateTopVHDL(VM.CurrentProject);
             }
-         }
+        }
+
+        // 設定画面を表示するボタンが押されたとき
+        private void Setting_Click(object sender, RoutedEventArgs e)
+        {
+            SettingWindow win = new SettingWindow(BaseDir + FileName.BoardsDir, ST);
+            win.Owner = GetWindow(this);
+            win.ShowDialog();
+            if (win.NewSetting != null)
+            {
+                ST = win.NewSetting;
+                ST.Save(BaseDir + FileName.Settings);
+                SetupComponentRects();
+                LastSourceDir = "";
+                CheckSourceDirectory();
+            }
+        }
 
         // VHDL テンプレート作成画面を表示するボタンが押されたとき
         private void VHDLTemplate_Click(object sender, RoutedEventArgs e)
@@ -248,6 +268,8 @@ namespace DRFront
             argsOpen.Add("project_name", VM.CurrentProject);
             argsOpen.Add("source_files", "{" + escapedSource + "}");
             argsOpen.Add("testbench_file", FileName.TestBenchVHDL);
+            argsOpen.Add("target_fpga", TargetFPGA);
+            argsOpen.Add("target_board", TargetBoardName);
             PrepareTcl(VM.CurrentProject, FileName.OpenProjectTCL, Properties.Resources.OPEN_PROJECT, argsOpen);
 
             // ビットストリームを生成する Tcl スクリプト
@@ -323,6 +345,8 @@ namespace DRFront
                 return;
 
             if (! CheckForLaunchVivado())
+                return;
+            if (!CheckProjectVersion(VM.CurrentProject))
                 return;
             if (! CheckTclVersion(VM.CurrentProject,tclFile))
                 return;
