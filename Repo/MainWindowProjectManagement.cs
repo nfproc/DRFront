@@ -30,6 +30,12 @@ namespace DRFront
             }
         }
 
+        private class VivadoProjectVersion
+        {
+            public string VivadoVersion;
+            public string TargetFPGA;
+        }
+
         // プロジェクト一覧を更新
         private void UpdateProjectList()
         {
@@ -185,6 +191,7 @@ namespace DRFront
         // Vivado バージョンの不一致がある場合，Vivado が作成したファイルを削除する
         private bool CheckProjectVersion(string project)
         {
+            string warnMessage = null;
             List<string> filesByDRFront = new List<string>
             {
                 FileName.BaseCheckPoint.ToLower(),
@@ -195,13 +202,20 @@ namespace DRFront
                 FileName.OpenHWTCL.ToLower(),
                 FileName.LogFolder.ToLower()
             };
-            string projectVersion = GetProjectVersion(project);
-            if (projectVersion != null && ST.VivadoVersion != null && projectVersion != ST.VivadoVersion)
-            {
-                string warnMessage = "Vivado のバージョンが一致しません．\n"
+            VivadoProjectVersion proj = GetProjectVersion(project);
+            if (proj != null && ST.VivadoVersion != null && proj.VivadoVersion != ST.VivadoVersion)
+                warnMessage = "Vivado のバージョンが一致しません．\n"
                     + "この PC の Vivado バージョン: " + ST.VivadoVersion + "\n"
-                    + "プロジェクトの Vivado バージョン: " + projectVersion + "\n"
+                    + "プロジェクトの Vivado バージョン: " + proj.VivadoVersion + "\n"
                     + "Vivado が作成したファイルを削除して続行しますか？";
+            else if (proj != null && TargetFPGA != null && proj.TargetFPGA != TargetFPGA)
+                warnMessage = "対象とする FPGA の型番が一致しません．\n"
+                    + "現在設定しているボードの FPGA: " + proj.TargetFPGA + "\n"
+                    + "プロジェクトが対象とする FPGA: " + TargetFPGA + "\n"
+                    + "Vivado が作成したファイルを削除して続行しますか？";
+
+            if (warnMessage != null)
+            {
                 if (!MsgBox.WarnAndConfirm(warnMessage))
                     return false;
 
@@ -244,8 +258,9 @@ namespace DRFront
         }
 
         // 指定されたフォルダにあるプロジェクトの Vivado バージョンを調べる
-        private string GetProjectVersion(string project)
+        private VivadoProjectVersion GetProjectVersion(string project)
         {
+            VivadoProjectVersion result = new VivadoProjectVersion();
             if (project == NewProjectLabel)
                 return null;
 
@@ -256,15 +271,19 @@ namespace DRFront
             try
             {
                 StreamReader sr = new StreamReader(projectFileName, Encoding.GetEncoding("ISO-8859-1"));
-                string result = null;
-                for (int i = 0; i < 5; i++) // Product Version is written in first few lines
+                result.VivadoVersion = result.TargetFPGA = null;
+                for (int i = 0; i < 20; i++) // Version/Target is written in the beginning of file
                 {
                     string line = sr.ReadLine();
                     if (line == null)
                         break;
                     Match match = Regex.Match(line, @"Product Version: Vivado v([0-9\.]+)");
                     if (match.Success)
-                        result = match.Groups[1].Value;
+                        result.VivadoVersion = match.Groups[1].Value;
+
+                    match = Regex.Match(line, @"""Part"" Val=""([0-9a-zA-Z\-]+)");
+                    if (match.Success)
+                        result.TargetFPGA = match.Groups[1].Value;
                 }
                 sr.Close();
                 return result;

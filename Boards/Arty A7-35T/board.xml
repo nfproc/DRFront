@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<DRFrontBoardDefinition xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <TargetFPGA>xc7a35ticsg324-1L</TargetFPGA>
+  <TargetBoard>digilentinc.com:arty-a7-35:part0:1.0</TargetBoard>
+  <BoardImage path="Arty.jpg" width="600" height="320" />
+  <Component name="SW(0)" left="234" top="261" width="24" height="48" />
+  <Component name="SW(1)" left="207" top="261" width="24" height="48" />
+  <Component name="SW(2)" left="177" top="261" width="24" height="48" />
+  <Component name="SW(3)" left="149" top="261" width="24" height="48" />
+  <Component name="SW(4)" left="490" top="282" width="20" height="30" />
+  <Component name="SW(5)" left="468" top="282" width="20" height="30" />
+  <Component name="SW(6)" left="446" top="282" width="20" height="30" />
+  <Component name="SW(7)" left="424" top="282" width="20" height="30" />
+  <Component name="LD(0)" left="115" top="286" width="22" height="22" default="'0'" />
+  <Component name="LD(1)" left="90" top="286" width="22" height="22" default="'0'" />
+  <Component name="LD(2)" left="65" top="286" width="22" height="22" default="'0'" />
+  <Component name="LD(3)" left="40" top="286" width="22" height="22" default="'0'" />
+  <Component name="LD(4)" left="115" top="261" width="22" height="22" default="'0'" />
+  <Component name="LD(5)" left="90" top="261" width="22" height="22" default="'0'" />
+  <Component name="LD(6)" left="65" top="261" width="22" height="22" default="'0'" />
+  <Component name="LD(7)" left="40" top="261" width="22" height="22" default="'0'" />
+  <Component name="AN(0)" left="557" top="65" width="31" height="50" default="'1'" />
+  <Component name="AN(1)" left="524" top="65" width="31" height="50" default="'1'" />
+  <Component name="AN(2)" left="491" top="65" width="31" height="50" default="'1'" />
+  <Component name="AN(3)" left="458" top="65" width="31" height="50" default="'1'" />
+  <Component name="CLK" left="314" top="5" width="33" height="33" />
+  <Component name="RST" left="370" top="5" width="33" height="33" />
+  <Component name="CA" left="501" top="122" width="60" height="20" default="'1'" />
+  <Component name="CB" left="531" top="143" width="30" height="32" default="'1'" />
+  <Component name="CC" left="521" top="197" width="30" height="32" default="'1'" />
+  <Component name="CD" left="481" top="230" width="58" height="20" default="'1'" />
+  <Component name="CE" left="481" top="197" width="30" height="32" default="'1'" />
+  <Component name="CF" left="491" top="143" width="30" height="32" default="'1'" />
+  <Component name="CG" left="491" top="176" width="60" height="20" default="'1'" />
+  <Component name="DP" left="541" top="230" width="20" height="20" default="'1'" />
+  <Component name="BTNU" left="334" top="273" width="30" height="30" />
+  <Component name="BTNL" left="270" top="273" width="30" height="30" />
+  <Component name="BTNC" left="543" top="281" width="30" height="30" />
+  <Component name="BTNR" left="365" top="273" width="30" height="30" />
+  <Component name="BTND" left="302" top="273" width="30" height="30" />
+</DRFrontBoardDefinition>
