@@ -9,7 +9,7 @@ FPGAの一部分をユーザが書き換える形でディジタル回路の設�
 します．現時点では，Digilent社のNexys A7-100Tボードのみを対象としています．
 
 配布パッケージのダウンロード:
-<a href="https://aitech.ac.jp/~dslab/nf/DRFront/DRFront_dist_v0_4_0.zip">
+<a href="https://aitech.ac.jp/~dslab/nf/DRFront/DRFront_dist_v0_4_1.zip">
 ZIP</a> (3.81 MiB)
 
 ### 配布パッケージの内容:
@@ -98,6 +98,10 @@ Ookii Dialogs は New BSD ライセンスに従って DLL ファイルを再配�
 す．詳細は COPYING ファイルを参照してください．
 
 ### 更新履歴
+- v0.4.1 2024-03-08
+  - Vivado プロジェクトのバージョンチェックの際に，対象 FPGA が一致するか
+    どうかもチェックするように変更．
+
 - v0.4.0 2024-03-05
   - Vivado のインストール先や使用するバージョンを，手動で指定する機能を
     追加．
