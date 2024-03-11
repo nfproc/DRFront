@@ -6,11 +6,14 @@ Copyright (C) 2022-2024 Naoki FUJIEDA. All rights reserved.
 
 FPGAの一部分をユーザが書き換える形でディジタル回路の設計・開発を行うための
 ワークフローを支援するツールです．Xilinx社FPGAの動的再構成機能（DFX）を使用
-します．現時点では，Digilent社のNexys A7-100Tボードのみを対象としています．
+します．現時点では，Digilent社の以下のボードを対象としています．
+- Nexys A7-100T
+- Arty A7-35T
+- CMod A7-35T (+ PModLED + PModSWT)
 
 配布パッケージのダウンロード:
-<a href="https://aitech.ac.jp/~dslab/nf/DRFront/DRFront_dist_v0_4_1.zip">
-ZIP</a> (3.81 MiB)
+<a href="https://aitech.ac.jp/~dslab/nf/DRFront/DRFront_dist_v0_4_1a.zip">
+ZIP</a> (10.9 MiB)
 
 ### 配布パッケージの内容:
 - Boards/               : ボード定義（ベース設計のチェックポイントを含む）
@@ -98,6 +101,10 @@ Ookii Dialogs は New BSD ライセンスに従って DLL ファイルを再配�
 す．詳細は COPYING ファイルを参照してください．
 
 ### 更新履歴
+- v0.4.1a 2024-03-11
+  - Arty と CMod に対するサポートを追加（ボード定義の追加のみ，DRFront
+    自体には更新なし）
+
 - v0.4.1 2024-03-08
   - Vivado プロジェクトのバージョンチェックの際に，対象 FPGA が一致するか
     どうかもチェックするように変更．
