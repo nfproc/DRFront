@@ -20,7 +20,7 @@ namespace DRFront
             VM.IsProjectValid = false;
             VM.SourceProblem = "";
             VM.UserEntity = "";
-            VHDLUserPorts = null;
+            HDLUserPorts = null;
             VM.UserPorts.Clear();
             updateTimer.Stop();
 
@@ -36,30 +36,33 @@ namespace DRFront
                 UpdateProjectList();
                 return;
             }
-            if (!Directory.Exists(VM.SourceDirPath))
+            if (! Directory.Exists(VM.SourceDirPath))
             {
                 VM.SourceProblem = "無効または存在しないディレクトリです．";
                 UpdateProjectList();
                 return;
             }
 
-            // VHDL ファイルを含むかどうか確認
+            // HDL ファイルを含むかどうか確認
+            string topHDL      = (ST.PreferredLanguage == "VHDL") ? FileName.TopVHDL : FileName.TopVerilog;
+            IList<string> exts = (ST.PreferredLanguage == "VHDL") ? FileName.ExtsVHDL : FileName.ExtsVerilog;
+
             SourceFileNames.Clear();
-            foreach (string file in Directory.GetFiles(VM.SourceDirPath, "*.vhd"))
-                if (file.ToLower().EndsWith(".vhd"))
-                    SourceFileNames.Add(file);
-            foreach (string file in Directory.GetFiles(VM.SourceDirPath, "*.vhdl"))
-                if (! file.ToLower().EndsWith(FileName.TopVHDL) && file.ToLower().EndsWith(".vhdl"))
-                    SourceFileNames.Add(file);
+            foreach (string ext in exts)
+                foreach (string file in Directory.GetFiles(VM.SourceDirPath, "*" + ext))
+                    if (! file.ToLower().EndsWith(topHDL) && file.ToLower().EndsWith(ext))
+                        SourceFileNames.Add(file);
+
             if (SourceFileNames.Count == 0)
             {
-                VM.SourceProblem = "ディレクトリ内に VHDL ファイルが見つかりません．";
+                VM.SourceProblem = "ディレクトリ内に " + ST.PreferredLanguage + " ファイルが見つかりません．";
                 UpdateProjectList();
                 return;
             }
 
-            // VHDL ファイルを順番に解析 (See VHDLSources.cs)
-            TopFinder = new TopEntityFinder(SourceFileNames);
+            // HDL ファイルを順番に解析 (See HDLSources.cs)
+            string fullSVInstPath = BaseDir + "\\" + FileName.SVInstPath;
+            TopFinder = new TopEntityFinder(SourceFileNames, ST.PreferredLanguage, fullSVInstPath);
             if (! TopFinder.IsValid)
             {
                 VM.SourceProblem = TopFinder.Problem;
@@ -87,8 +90,8 @@ namespace DRFront
             return result;
         }
 
-        // トップ回路の VHDL 記述を生成する
-        private void GenerateTopVHDL(string project)
+        // トップ回路の HDL 記述を生成する
+        private void GenerateTopHDL(string project)
         {
             // エラー・重複がある場合は生成しない
             if (!VM.IsProjectValid || project == NewProjectLabel)
@@ -98,182 +101,96 @@ namespace DRFront
                 if (assignment.Value.Count >= 2)
                     return;
 
-            GenerateVHDL(Properties.Resources.DR_TOP, FileName.TopVHDL, project);
+            string fullFileName;
+            HDLEntity ent;
+            HDLSource src;
+            string template;
+            if (ST.PreferredLanguage == "VHDL")
+            {
+                fullFileName = VM.SourceDirPath + @"\" + project + @"\" + FileName.TopVHDL;
+                ent = new VHDLEntity(FileName.TopVHDL, VM.UserEntity);
+                src = new VHDLSource(ent, HDLUserPorts);
+                template = Properties.Resources.DR_TOP;
+            }
+            else
+            {
+                fullFileName = VM.SourceDirPath + @"\" + project + @"\" + FileName.TopVerilog;
+                ent = new VerilogEntity(FileName.TopVerilog, VM.UserEntity);
+                src = new VerilogSource(ent, HDLUserPorts);
+                template = Properties.Resources.DR_TOP_V;
+            }
+
+            Dictionary<string, string> unusedPorts = new Dictionary<string, string>();
+            foreach (var def in ComponentDefaults)
+                if (assignments[def.Key].Count == 0)
+                    unusedPorts.Add(def.Key, def.Value);
+
+            src.Generate(template, fullFileName, VM.UserPorts, unusedPorts);
         }
 
-        // テストベンチ雛形の VHDL 記述を生成する
-        private void GenerateTestBenchVHDL(string project)
+        // テストベンチ雛形の HDL 記述を生成する
+        private void GenerateTestBenchHDL(string project)
         {
             if (!VM.IsProjectValid || project == NewProjectLabel)
                 return;
-            GenerateVHDL(Properties.Resources.DR_TESTBENCH, FileName.TestBenchVHDL, project);
-        }
 
-        // トップ回路またはテストベンチ雛形の VHDL 記述を生成する
-        private void GenerateVHDL(string template, string fileName, string project)
-        {
-            string fullFileName = VM.SourceDirPath + @"\" + project + @"\" + fileName;
-            string userCode = GetUserCodeToPreserve(fullFileName);
-            bool preserved = false;
-
-            Dictionary<string, List<string>> assignments = GetAssignments();
-            string[] strs = template.Replace("\r\n","\n").Split(new[]{ '\n'});
-            try
+            string fullFileName;
+            HDLEntity ent;
+            HDLSource src;
+            string template;
+            if (ST.PreferredLanguage == "VHDL")
             {
-                StreamWriter sw = File.CreateText(fullFileName);
-                foreach (string str in strs)
-                {
-                    if (str.StartsWith("-- USER_COMPONENT"))
-                    {
-                        // Component 宣言
-                        sw.WriteLine("    component " + VM.UserEntity + " is");
-                        sw.WriteLine("        port (");
-                        int i = 0;
-                        foreach (VHDLPort port in VHDLUserPorts)
-                        {
-                            string sep = (i == VHDLUserPorts.Count - 1) ? ");" : ";";
-                            sw.WriteLine("            " + port.ToString() + sep);
-                            i += 1;
-                        }
-                        sw.WriteLine("    end component;");
-                    }
-                    else if (str.StartsWith("-- USER_SIGNAL"))
-                    {
-                        // Port に対応する内部信号
-                        foreach (VHDLPort port in VHDLUserPorts)
-                            sw.WriteLine("    signal " + port.ToString(true) + ";");
-                    }
-                    else if (str.StartsWith("-- USER_INSTANCE"))
-                    {
-                        // インスタンス化
-                        sw.WriteLine("    usr : " + VM.UserEntity + " port map (");
-                        int i = 0;
-                        foreach (UserPortItem port in VM.UserPorts)
-                        {
-                            string target = (port.TopPort != "") ? port.TopPort :
-                                            (port.Direction == "Input") ? "'0'" : "open";
-                            string sep = (i == VM.UserPorts.Count - 1) ? " );" : ",";
-                            sw.WriteLine("        " + port.Name + " => " + target + sep);
-                            i += 1;
-                        }
-                        foreach (var def in ComponentDefaults)
-                            if (assignments[def.Key].Count == 0)
-                                sw.WriteLine("    " + def.Key + " <= " + def.Value + ";");
-                    }
-                    else if (str.StartsWith("-- USER_UUT"))
-                    {
-                        // インスタンス化（テストベンチ用）
-                        sw.WriteLine("    uut : " + VM.UserEntity + " port map (");
-                        int i = 0;
-                        foreach (UserPortItem port in VM.UserPorts)
-                        {
-                            string sep = (i == VM.UserPorts.Count - 1) ? " );" : ",";
-                            sw.WriteLine("        " + port.Name + " => " + port.Name + sep);
-                            i += 1;
-                        }
-                    }
-                    else if (str.StartsWith("-- vvv"))
-                    {
-                        sw.WriteLine(str);
-                        if (userCode != "")
-                        {
-                            sw.Write(userCode);
-                            preserved = true;
-                        }
-                    }
-                    else if (str.StartsWith("-- ^^^"))
-                    {
-                        preserved = false;
-                        sw.WriteLine(str);
-                    }
-                    else if (! preserved)
-                    {
-                        sw.WriteLine(str);
-                    }
-                }
-                sw.Close();
+                fullFileName = VM.SourceDirPath + @"\" + project + @"\" + FileName.TestBenchVHDL;
+                ent = new VHDLEntity(FileName.TestBenchVHDL, VM.UserEntity);
+                src = new VHDLSource(ent, HDLUserPorts);
+                template = Properties.Resources.DR_TESTBENCH;
             }
-            catch (IOException ex)
+            else
             {
-                MsgBox.Warn("VHDL ファイルの作成中にエラーが発生しました．\n" + ex.Message);
-                return;
+                fullFileName = VM.SourceDirPath + @"\" + project + @"\" + FileName.TestBenchVerilog;
+                ent = new VerilogEntity(FileName.TestBenchVerilog, VM.UserEntity);
+                src = new VerilogSource(ent, HDLUserPorts);
+                template = Properties.Resources.DR_TESTBENCH_V;
             }
-        }
-
-        // 雛形の VHDL 記述からユーザの記述した箇所を抜き出す
-        private string GetUserCodeToPreserve(string fullFileName)
-        {
-            string result = "";
-            if (! File.Exists(fullFileName))
-                return result;
-
-            try
-            {
-                StreamReader sr = new StreamReader(fullFileName, Encoding.GetEncoding("ISO-8859-1"));
-                string line;
-                bool preserve = false;
-                while ((line = sr.ReadLine()) != null)
-                {
-                    if (line.IndexOf("-- ^^^") != -1)
-                        preserve = false;
-                    if (preserve)
-                        result += line + "\n";
-                    if (line.IndexOf("-- vvv") != -1)
-                        preserve = true;
-                }
-                sr.Close();
-            }
-            catch (IOException ex)
-            {
-                MsgBox.Warn("VHDL ファイルの読込中にエラーが発生しました．\n" + ex.Message);
-                return "";
-            }
-            result = Regex.Replace(result, @"[^\u0000-\u007F]", "?"); // 非ASCII文字は ? にする
-            return result;
+            src.Generate(template, fullFileName, VM.UserPorts);
         }
         
-        // トップ回路の VHDL 記述を読んで，割当てを復元する
-        private void ReadTopVHDL(string project)
+        // トップ回路の HDL 記述を読んで，割当てを復元する
+        private void ReadTopHDL(string project)
         {
+            HDLSource src;
+            string topFileName;
+            if (ST.PreferredLanguage == "VHDL")
+            {
+                src = new VHDLSource();
+                topFileName = FileName.TopVHDL;
+            }
+            else
+            {
+                src = new VerilogSource();
+                topFileName = FileName.TopVerilog;
+            }
+            string oldFileName = VM.SourceDirPath + @"\" + topFileName;
+            string fullFileName = VM.SourceDirPath + @"\" + project + @"\" + topFileName;
+
             // エラーがある場合やファイルが存在しない場合はスキップ
             if (! VM.IsProjectValid)
                 return;
-            if (File.Exists(VM.SourceDirPath + @"\" + FileName.TopVHDL))
+            if (File.Exists(oldFileName))
                 MoveTopVHDL();
-            if (! File.Exists(VM.SourceDirPath + @"\" + project + @"\" + FileName.TopVHDL))
+            if (! File.Exists(fullFileName))
                 return;
 
-            foreach (VHDLPort port in TopFinder.UserPorts)
-                port.ToAssign = "";
+            src.ReadTop(fullFileName);
+            TopFinder.SetTopEntity(src.Components[0].Name);
+            foreach (HDLPort uport in TopFinder.UserPorts)
+            {
+                uport.ToAssign = "";
+                foreach (HDLPort hport in src.Ports["top"])
+                    if (uport.Name == hport.Name && ComponentRectangles.ContainsKey(hport.ToAssign))
+                        uport.ToAssign = hport.ToAssign;
+            }
 
-            try
-            {
-                StreamReader sr = new StreamReader(VM.SourceDirPath + @"\" + project + @"\" + FileName.TopVHDL, Encoding.GetEncoding("ISO-8859-1"));
-                string line;
-                while ((line = sr.ReadLine()) != null)
-                {
-                    Match match = Regex.Match(line, @"component ([A-Za-z0-9_]+) is");
-                    if (match.Success)
-                    {
-                        TopFinder.SetTopEntity(match.Groups[1].Value);
-                    }
-                    match = Regex.Match(line, @"([A-Za-z0-9_\(\)]+) => ([A-Z0-9\(\)]+)");
-                    if (match.Success)
-                    {
-                        string usr = match.Groups[1].Value;
-                        string top = match.Groups[2].Value;
-                        foreach (VHDLPort port in TopFinder.UserPorts)
-                            if (port.Name == usr.ToLower() && ComponentRectangles.ContainsKey(top))
-                                port.ToAssign = top;
-                    }
-                }
-                sr.Close();
-            }
-            catch (IOException ex)
-            {
-                MsgBox.Warn("トップ回路の VHDL ファイルの読込中にエラーが発生しました．\n" + ex.Message);
-                return;
-            }
             UpdateComponentRectangles();
         }
 
@@ -306,7 +223,8 @@ namespace DRFront
         private bool CheckUserPortModified()
         {
             bool modified = false;
-            TopEntityFinder newTop = new TopEntityFinder(SourceFileNames);
+            string fullSVInstPath = BaseDir + "\\" + FileName.SVInstPath;
+            TopEntityFinder newTop = new TopEntityFinder(SourceFileNames, ST.PreferredLanguage, fullSVInstPath);
             if (! newTop.IsValid)
             {
                 MsgBox.Warn("更新されたソースファイルに問題があります．\n" + newTop.Problem);
@@ -315,7 +233,7 @@ namespace DRFront
             if (newTop.TopEntity != TopFinder.TopEntity)
                 if (! newTop.SetTopEntity(TopFinder.TopEntity))
                 {
-                    MsgBox.Warn("更新されたソースファイルに問題があります．\nエンティティ " + TopFinder.TopEntity + " が見つかりません．");
+                    MsgBox.Warn("更新されたソースファイルに問題があります．\n" + TopFinder.TopEntity + " が見つかりません．");
                     return false;
                 }
                     
@@ -331,9 +249,9 @@ namespace DRFront
                 if (! MsgBox.WarnAndConfirm("ユーザ回路が更新されているようです．トップ回路を再生成して続行しますか？"))
                     return false;
                 TopFinder = newTop;
-                ReadTopVHDL(VM.CurrentProject);
+                ReadTopHDL(VM.CurrentProject);
                 UpdateUserPorts();
-                GenerateTopVHDL(VM.CurrentProject);
+                GenerateTopHDL(VM.CurrentProject);
             }
             return true;
         }

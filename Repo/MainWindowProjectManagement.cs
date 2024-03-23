@@ -103,14 +103,14 @@ namespace DRFront
             }
         }
 
-        // トップ回路の VHDL をもとに，プロジェクトの設定を更新する
+        // トップ回路の HDL をもとに，プロジェクトの設定を更新する
         private void ReadProjectSettings()
         {
             UpdateProjectStatus(CheckVivadoProject(VM.CurrentProject));
             if (VM.IsNewProjectSelected)
                 return;
 
-            ReadTopVHDL(VM.CurrentProject);
+            ReadTopHDL(VM.CurrentProject);
             if (TopFinder.TopEntity == null)
                 TopFinder.TopEntity = TopFinder.SuggestedTopEntity;
             UpdateUserPorts();
@@ -123,9 +123,9 @@ namespace DRFront
                 return;
 
             VM.UserEntity = TopFinder.TopEntity;
-            VHDLUserPorts = TopFinder.TopPorts;
+            HDLUserPorts = TopFinder.TopPorts;
             VM.UserPorts.Clear();
-            foreach (VHDLPort port in TopFinder.UserPorts)
+            foreach (HDLPort port in TopFinder.UserPorts)
             {
                 List<string> portList = (port.Direction == "Input") ? InputPortList : OutputPortList;
                 VM.UserPorts.Add(new UserPortItem(port.OriginalName, port.Direction, portList, port.ToAssign));
@@ -177,7 +177,8 @@ namespace DRFront
                 return new VivadoProject(project, false, false, false, false);
             
             string fullName = VM.SourceDirPath + @"\" + project;
-            if (File.Exists(fullName + @"\" + FileName.TopVHDL) ||
+            string topHDL = (ST.PreferredLanguage == "VHDL") ? FileName.TopVHDL : FileName.TopVerilog;
+            if (File.Exists(fullName + @"\" + topHDL) ||
                 File.Exists(fullName + @"\" + project + ".xpr"))
             {
                 bool tcl = (EnumerateVivadoFiles(fullName, "TCLFile").Count != 0);

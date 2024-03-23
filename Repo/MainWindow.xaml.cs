@@ -6,6 +6,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Windows.Shapes;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -27,7 +28,7 @@ namespace DRFront
         private Dictionary<string, Rect> ComponentLocations;
         private Dictionary<string, Rectangle> ComponentRectangles;
         private Dictionary<string, string> ComponentDefaults;
-        private List<VHDLPort> VHDLUserPorts;
+        private List<HDLPort> HDLUserPorts;
         private List<string> InputPortList, OutputPortList;
         private string SelectedRectangleName = "";
         private bool ProjectListUpdating = false;
@@ -47,12 +48,17 @@ namespace DRFront
             public const string UserCheckPoint = "__checkpoint.dcp";
             public const string TopVHDL = "dr_top.vhdl";
             public const string TestBenchVHDL = "dr_testbench.vhdl";
+            public const string TopVerilog = "dr_top.sv";
+            public const string TestBenchVerilog = "dr_testbench.sv";
+            public static readonly IList<string> ExtsVHDL = new ReadOnlyCollection<string>(new[] { ".vhd", ".vhdl" });
+            public static readonly IList<string> ExtsVerilog = new ReadOnlyCollection<string>(new[] { ".v", ".sv" });
             public const string OpenProjectTCL = "OpenProject.tcl";
             public const string BitGenTCL = "GenerateBitstream.tcl";
             public const string OpenHWTCL = "OpenHW.tcl";
             public const string LogFolder = "logs";
             public const string BoardsDir = "boards\\";
             public const string Settings = "setting.xml";
+            public const string SVInstPath = "ext\\svinst_port.exe";
         }
 
         public MainWindow()
@@ -137,7 +143,7 @@ namespace DRFront
             VM.IsProjectValid = true;
             TopFinder.SetTopEntity(TopFinder.SuggestedTopEntity);
             UpdateUserPorts();
-            GenerateTopVHDL(project);
+            GenerateTopHDL(project);
             UpdateProjectList();
         }
 
@@ -156,7 +162,7 @@ namespace DRFront
             {
                 TopFinder.SetTopEntity(win.ReturnValue, true);
                 UpdateUserPorts();
-                GenerateTopVHDL(VM.CurrentProject);
+                GenerateTopHDL(VM.CurrentProject);
             }
         }
 
@@ -179,7 +185,7 @@ namespace DRFront
         // VHDL テンプレート作成画面を表示するボタンが押されたとき
         private void VHDLTemplate_Click(object sender, RoutedEventArgs e)
         {
-            VHDLTemplateWindow win = new VHDLTemplateWindow();
+            HDLTemplateWindow win = new HDLTemplateWindow(ST.PreferredLanguage);
             win.Owner = GetWindow(this);
             win.Show();
         }
@@ -226,7 +232,7 @@ namespace DRFront
             }
 
             UpdateComponentRectangles();
-            GenerateTopVHDL(VM.CurrentProject);
+            GenerateTopHDL(VM.CurrentProject);
 
             if (clockAssigned || resetAssigned)
             {
@@ -244,7 +250,7 @@ namespace DRFront
             foreach (var port in VM.UserPorts)
                 port.TopPort = "";
             UpdateComponentRectangles();
-            GenerateTopVHDL(VM.CurrentProject);
+            GenerateTopHDL(VM.CurrentProject);
         }
 
         // プロジェクトごとに必要なファイルを作成/更新するボタンが押されたとき
@@ -260,18 +266,20 @@ namespace DRFront
                 Directory.CreateDirectory(VM.SourceDirPath + @"\" + VM.CurrentProject + @"\logs");
 
             // テストベンチ
-            GenerateTestBenchVHDL(VM.CurrentProject);
+            GenerateTestBenchHDL(VM.CurrentProject);
 
             // プロジェクトを開く Tcl スクリプト
             Dictionary<string, string> argsOpen = new Dictionary<string, string>();
             string escapedSource = "";
+            string topHDL       = (ST.PreferredLanguage == "VHDL") ? FileName.TopVHDL : FileName.TopVerilog;
+            string testbenchHDL = (ST.PreferredLanguage == "VHDL") ? FileName.TestBenchVHDL : FileName.TestBenchVerilog;
             foreach (string fileName in SourceFileNames)
                 escapedSource += "../" + (new FileInfo(fileName).Name.Replace(" ", @"\ ")) + " ";
-            escapedSource += "./" + FileName.TopVHDL;
+            escapedSource += "./" + topHDL;
 
             argsOpen.Add("project_name", VM.CurrentProject);
             argsOpen.Add("source_files", "{" + escapedSource + "}");
-            argsOpen.Add("testbench_file", FileName.TestBenchVHDL);
+            argsOpen.Add("testbench_file", testbenchHDL);
             argsOpen.Add("target_fpga", TargetFPGA);
             argsOpen.Add("target_board", TargetBoardName);
             PrepareTcl(VM.CurrentProject, FileName.OpenProjectTCL, Properties.Resources.OPEN_PROJECT, argsOpen);
@@ -365,7 +373,7 @@ namespace DRFront
             if (cmb.IsDropDownOpen || cmb.IsKeyboardFocused) // UIから選択を切り替えた時のみ処理
             {
                 UpdateComponentRectangles();
-                GenerateTopVHDL(VM.CurrentProject);
+                GenerateTopHDL(VM.CurrentProject);
             }
         }
 
@@ -400,7 +408,7 @@ namespace DRFront
             item.TopPort = SelectedRectangleName;
             SelectedRectangleName = "";
             UpdateComponentRectangles();
-            GenerateTopVHDL(VM.CurrentProject);
+            GenerateTopHDL(VM.CurrentProject);
         }
 
         // プロジェクトの状況を監視するタイマが作動したとき

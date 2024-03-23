@@ -62,15 +62,18 @@ namespace DRFront
             TargetBoardName = board.TargetBoard;
             foreach (DRFrontBoardDefinition.DRFrontBoardComponent comp in board.Components)
             {
-                ComponentLocations.Add(comp.Name, new Rect(comp.Left, comp.Top, comp.Width, comp.Height));
+                string cname = comp.Name;
+                if (ST.PreferredLanguage != "VHDL")
+                    cname = cname.Replace('(', '[').Replace(')', ']');
+                ComponentLocations.Add(cname, new Rect(comp.Left, comp.Top, comp.Width, comp.Height));
                 if (comp.DefaultValue != null)
                 {
-                    ComponentDefaults.Add(comp.Name, comp.DefaultValue);
-                    OutputPortList.Add(comp.Name);
+                    ComponentDefaults.Add(cname, comp.DefaultValue);
+                    OutputPortList.Add(cname);
                 }
                 else
                 {
-                    InputPortList.Add(comp.Name);
+                    InputPortList.Add(cname);
                 }
             }
             // 存在しなくなったポートへの割り当てを解除

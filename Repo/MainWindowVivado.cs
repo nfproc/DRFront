@@ -104,7 +104,7 @@ namespace DRFront
         private bool CheckTclVersion(string project, string tclFile)
         {
             int ver = GetTclVersion(project, tclFile);
-            if (ver == -1 || ver >= 400) // 0.4.0 以上なら OK
+            if (ver == -1 || ver >= 500) // 0.5.0 以上なら OK
                 return true;
 
             string warnMessage = "Vivado 用のスクリプトが，過去の DRFront で作成されたもののようです．\n"

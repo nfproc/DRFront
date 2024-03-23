@@ -64,7 +64,7 @@
             <Label Content="Pref. Language" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             <RadioButton Content="VHDL" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center"
                          IsChecked="{Binding PreferredLanguage, Converter={StaticResource PreferredLanguageConverter}, Mode=TwoWay, ConverterParameter=VHDL}"/>
-            <RadioButton Content="SystemVerilog" Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Center" IsEnabled="False"
+            <RadioButton Content="SystemVerilog" Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Center"
                          IsChecked="{Binding PreferredLanguage, Converter={StaticResource PreferredLanguageConverter}, Mode=TwoWay, ConverterParameter=SystemVerilog}"/>
 
         </Grid>

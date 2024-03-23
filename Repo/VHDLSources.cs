@@ -1,13 +1,12 @@
 ﻿// DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
-// Copyright (C) 2022-2023 Naoki FUJIEDA. New BSD License is applied.
+// Copyright (C) 2022-2024 Naoki FUJIEDA. New BSD License is applied.
 //
-// Code in this file are derived from "GGFront: A GHDL/GTKWave GUI Frontend"
+// Some code in this file are derived from "GGFront: A GHDL/GTKWave GUI Frontend"
 // Copyright (C) 2018-2022 Naoki FUJIEDA. New BSD License is applied.
 //**********************************************************************
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -15,48 +14,30 @@ using System.Text.RegularExpressions;
 namespace DRFront
 {
     // Entity に関する情報のクラス
-    public class VHDLEntity
+    public class VHDLEntity : HDLEntity
     {
-        public string Name, OriginalName;
-        public string ShortPath;
-
-        public VHDLEntity(string path, string originalName)
+        public VHDLEntity(string path, string originalName) : base(path, originalName)
         {
-            Name = originalName.ToLower();
-            OriginalName = originalName;
-            ShortPath = path;
+            Name = Name.ToLower();
         }
     }
 
     // Component に関する情報のクラス
-    public class VHDLComponent
+    public class VHDLComponent : HDLComponent
     {
-        public string Name, From;
-
-        public VHDLComponent(string name, string from)
-        {
-            Name = name;
-            From = from;
-        }
+        public VHDLComponent(string name, string from) : base(name, from) {}
     };
 
     // Port に関する情報を保持するクラス
-    public class VHDLPort
+    public class VHDLPort : HDLPort
     {
-        public string Name, OriginalName, Direction, ToAssign;
-        public bool IsVector;
-        public int Upper, Lower;
-
         public VHDLPort(string originalName, string direction, int upper = -1, int lower = -1)
+            : base(originalName, direction, upper, lower)
         {
-            Name = originalName.ToLower();
-            OriginalName = originalName;
-            Direction = direction;
-            ToAssign = "";
-            IsVector = (upper != -1);
-            Upper = upper;
-            Lower = lower;
+            Name = Name.ToLower();
         }
+
+        public VHDLPort(TemplatePortItem port) : base(port) { }
 
         public override string ToString()
         {
@@ -69,23 +50,29 @@ namespace DRFront
             string type = "std_logic" + ((IsVector) ? "_vector(" + Upper + " downto " + Lower + ")" : "");
             return OriginalName + " : " + dir + type;
         }
-    }
-    // ソースコードの解析結果を保持するクラス
-    public class VHDLSource
-    {
-        public bool IsValid;
-        public string Problem;
-        public List<VHDLEntity> Entities;
-        public List<VHDLComponent> Components;
-        public Dictionary<string, List<VHDLPort>> Ports;
 
-        // コンストラクタ: ソースファイルの解析を行う
-        public VHDLSource(string sourceName)
+        public override List<HDLPort> ToVector()
+        {
+            List<HDLPort> result = new List<HDLPort>();
+            if (IsVector)
+                for (int i = Lower; i <= Upper; i += 1)
+                    result.Add(new VHDLPort(OriginalName + "(" + i + ")", Direction));
+            else
+                result.Add(new VHDLPort(OriginalName, Direction));
+            return result;
+        }
+    }
+
+    // ソースコードの解析結果を保持するクラス
+    public class VHDLSource : HDLSource
+    {
+        public VHDLSource() : base() { }
+        public VHDLSource(HDLEntity entity, List<HDLPort> port) : base(entity, port) { }
+
+        // Read メソッド: 一般のソースファイルの解析を行う
+        public override void Read(string sourceName)
         {
             string shortPath = Path.GetFileName(sourceName);
-            Entities = new List<VHDLEntity>();
-            Components = new List<VHDLComponent>();
-            Ports = new Dictionary<string, List<VHDLPort>>();
             try
             {
                 StreamReader sr = new StreamReader(sourceName, Encoding.GetEncoding("ISO-8859-1"));
@@ -107,7 +94,7 @@ namespace DRFront
                         currentArchitecture = "";
                         Entities.Add(newEntity);
                         if (! Ports.ContainsKey(currentEntity))
-                            Ports.Add(currentEntity, new List<VHDLPort>());
+                            Ports.Add(currentEntity, new List<HDLPort>());
                     }
 
                     if (currentEntity != "" && currentArchitecture == "")
@@ -179,177 +166,195 @@ namespace DRFront
                 IsValid = false;
             }
         }
+
+        // ReadTop メソッド: 自動生成されたトップ回路の解析を行う
+        public override void ReadTop(string sourceName)
+        {
+            try
+            {
+                StreamReader sr = new StreamReader(sourceName, Encoding.GetEncoding("ISO-8859-1"));
+                List<HDLPort> topPorts = new List<HDLPort>(); 
+                string line;
+
+                while ((line = sr.ReadLine()) != null)
+                {
+                    Match match = Regex.Match(line, @"component ([A-Za-z0-9_]+) is");
+                    if (match.Success)
+                    {
+                        Components.Add(new VHDLComponent(match.Groups[1].Value, "top"));
+                    }
+                    match = Regex.Match(line, @"([A-Za-z0-9_\(\)]+) => ([A-Z0-9\(\)]+)");
+                    if (match.Success)
+                    {
+                        VHDLPort port = new VHDLPort(match.Groups[1].Value, "");
+                        port.ToAssign = match.Groups[2].Value;
+                        topPorts.Add(port);
+                    }
+                }
+                Ports.Add("top", topPorts);
+                sr.Close();
+            }
+            catch (IOException ex)
+            {
+                MsgBox.Warn("トップ回路の VHDL ファイルの読込中にエラーが発生しました．\n" + ex.Message);
+                return;
+            }
+        }
+
+        // Generate メソッド(1): トップ回路・テストベンチの生成
+        public override void Generate(string template, string fullFileName, IList<UserPortItem> UserPorts, Dictionary<string, string> UnusedPorts = null)
+        {
+            string userCode = GetUserCodeToPreserve(fullFileName);
+            string userEntity = Entities[0].OriginalName;
+            List<HDLPort> HDLPorts = Ports[Entities[0].Name];
+            bool preserved = false;
+
+            string[] strs = template.Replace("\r\n", "\n").Split(new[] { '\n' });
+            try
+            {
+                StreamWriter sw = File.CreateText(fullFileName);
+                foreach (string str in strs)
+                {
+                    if (str.StartsWith("-- USER_COMPONENT"))
+                    {
+                        // Component 宣言
+                        sw.WriteLine("    component " + userEntity + " is");
+                        sw.WriteLine("        port (");
+                        int i = 0;
+                        foreach (HDLPort port in HDLPorts)
+                        {
+                            string sep = (i == HDLPorts.Count - 1) ? ");" : ";";
+                            sw.WriteLine("            " + port.ToString() + sep);
+                            i += 1;
+                        }
+                        sw.WriteLine("    end component;");
+                    }
+                    else if (str.StartsWith("-- USER_SIGNAL"))
+                    {
+                        // Port に対応する内部信号
+                        foreach (HDLPort port in HDLPorts)
+                            if (port is VHDLPort vport)
+                                sw.WriteLine("    signal " + vport.ToString(true) + ";");
+                    }
+                    else if (str.StartsWith("-- USER_INSTANCE"))
+                    {
+                        // インスタンス化
+                        sw.WriteLine("    usr : " + userEntity + " port map (");
+                        int i = 0;
+                        foreach (UserPortItem port in UserPorts)
+                        {
+                            string target = (port.TopPort != "") ? port.TopPort :
+                                            (port.Direction == "Input") ? "'0'" : "open";
+                            string sep = (i == UserPorts.Count - 1) ? " );" : ",";
+                            sw.WriteLine("        " + port.Name + " => " + target + sep);
+                            i += 1;
+                        }
+                        foreach (var def in UnusedPorts)
+                            sw.WriteLine("    " + def.Key + " <= " + def.Value + ";");
+                    }
+                    else if (str.StartsWith("-- USER_UUT"))
+                    {
+                        // インスタンス化（テストベンチ用）
+                        sw.WriteLine("    uut : " + userEntity + " port map (");
+                        int i = 0;
+                        foreach (UserPortItem port in UserPorts)
+                        {
+                            string sep = (i == UserPorts.Count - 1) ? " );" : ",";
+                            sw.WriteLine("        " + port.Name + " => " + port.Name + sep);
+                            i += 1;
+                        }
+                    }
+                    else if (str.StartsWith("-- vvv"))
+                    {
+                        sw.WriteLine(str);
+                        if (userCode != "")
+                        {
+                            sw.Write(userCode);
+                            preserved = true;
+                        }
+                    }
+                    else if (str.StartsWith("-- ^^^"))
+                    {
+                        preserved = false;
+                        sw.WriteLine(str);
+                    }
+                    else if (!preserved)
+                    {
+                        sw.WriteLine(str);
+                    }
+                }
+                sw.Close();
+            }
+            catch (IOException ex)
+            {
+                MsgBox.Warn("VHDL ファイルの作成中にエラーが発生しました．\n" + ex.Message);
+                return;
+            }
+        }
+
+        // Generate メソッド(2): ユーザ回路の雛形を生成
+        public override void Generate(string template, string fullFileName, IList<TemplatePortItem> TemplatePorts)
+        {
+            string[] strs = template.Replace("\r\n", "\n").Split(new[] { '\n' });
+            try
+            {
+                StreamWriter sw = File.CreateText(fullFileName);
+                foreach (string str in strs)
+                {
+                    if (str.StartsWith("-- USER_PORT"))
+                    {
+                        // Port 宣言
+                        sw.WriteLine("    port (");
+                        int i = 0;
+                        foreach (TemplatePortItem port in TemplatePorts)
+                        {
+                            string sep = (i == TemplatePorts.Count - 1) ? ");" : ";";
+                            sw.WriteLine("        " + (new VHDLPort(port)).ToString() + sep);
+                            i += 1;
+                        }
+                    }
+                    else
+                    {
+                        sw.WriteLine(str.Replace("DR_ENTITY_NAME", Entities[0].OriginalName));
+                    }
+                }
+                sw.Close();
+            }
+            catch (IOException ex)
+            {
+                MsgBox.Warn("トップ回路の VHDL ファイルの作成中にエラーが発生しました．\n" + ex.Message);
+                return;
+            }
+        }
     }
 
-    // Entity の参照関係の解析結果を保持するクラス
-    public class EntityHierarchyItem
+    // VHDL の信号名チェックのための静的クラス
+    public static class VHDLNameChecker
     {
-        public int Level { get; set; }
-        public string Name { get; set; }
-        public string ShortPath { get; set; }
-        public bool IsTop { get; set; }
-    }
-
-    // Entity の階層関係を作成するクラス
-    public class TopEntityFinder
-    {
-        public bool IsValid = false;
-        public string TopEntity, Problem;
-        public string SuggestedTopEntity;
-        public List<VHDLPort> TopPorts, UserPorts;
-
-        public List<EntityHierarchyItem> ListItems;
-
-        private List<VHDLSource> Sources;
-        private List<VHDLEntity> Entities;
-        private List<VHDLComponent> Components;
-        private Dictionary<string, List<VHDLPort>> Ports;
-
-        public TopEntityFinder(List<string> files)
+        private static List<string> reservedNames = new List<string>
         {
-            // 各 VHDL ファイルを解析
-            Sources = new List<VHDLSource>();
-            int invalidSource = 0;
-            foreach (string fileName in files)
-            {
-                VHDLSource newSource = new VHDLSource(fileName);
-                Sources.Add(newSource);
-                if (!newSource.IsValid)
-                {
-                    invalidSource += 1;
-                    Problem = newSource.Problem;
-                }
-            }
-            if (invalidSource >= 2)
-                Problem = invalidSource + "個のソースファイルに問題があります．";
-            if (invalidSource != 0)
-                return;
+            "abs", "access", "after", "alias", "all", "and", "architecture", "array", "assert",
+            "attribute", "begin", "block", "body", "buffer", "bus", "case", "component",
+            "configuration", "constant", "disconnect", "downto", "else", "elsif", "end",
+            "entity", "exit", "file", "for", "function", "generate", "generic", "group",
+            "guarded", "if", "impure", "in", "inertial", "inout", "is", "label", "library",
+            "linkage", "literal", "loop", "map", "mod", "nand", "new", "next", "nor", "not",
+            "null", "of", "on", "open", "or", "others", "out", "package", "port", "postponed",
+            "procedure", "process", "pure", "range", "record", "register", "reject", "rem",
+            "report", "return", "rol", "ror", "select", "severity", "signal", "shared", "sla",
+            "sll", "sra", "srl", "subtype", "then", "to", "transport", "type", "unaffected",
+            "units", "until", "use", "variable", "wait", "when", "while", "with", "xnor", "xor"
+        };
 
-            // Entity, Component 宣言を数え上げる
-            Entities = new List<VHDLEntity>();
-            Components = new List<VHDLComponent>();
-            Ports = new Dictionary<string, List<VHDLPort>>();
-            foreach (VHDLSource src in Sources)
-            {
-                foreach (VHDLEntity entity in src.Entities)
-                {
-                    if (Entities.Exists(x => x.Name == entity.Name))
-                    {
-                        Problem = "エンティティ " + entity.OriginalName + " が重複しています．";
-                        return;
-                    }
-                    // 入出力がない場合はテストベンチ扱いとして除外
-                    if (src.Ports[entity.Name].Count != 0)
-                    {
-                        Entities.Add(entity);
-                        Ports.Add(entity.Name, src.Ports[entity.Name]);
-                    }
-                }
-            }
-            foreach (VHDLSource src in Sources)
-                foreach (VHDLComponent component in src.Components)
-                    if (Entities.Exists(x => x.Name == component.From))
-                        Components.Add(component);
-
-            if (Entities.Count == 0)
-            {
-                Problem = "回路のエンティティが見つかりません．";
-                return;
-            }
-
-            // 他から参照されていない Entity のうち，含まれる回路が最も多いものを抽出
-            List<List<EntityHierarchyItem>> trees = new List<List<EntityHierarchyItem>>();
-            foreach (VHDLEntity entity in Entities)
-            {
-                if (!Components.Exists(x => x.Name == entity.Name))
-                {
-                    List<EntityHierarchyItem> tree = SearchEntityTree(entity.Name, new List<string>());
-                    if (tree == null) // エラーを検出した時点で止める
-                    {
-                        trees.Clear();
-                        break;
-                    }
-                    trees.Add(tree);
-                }
-            }
-            if (trees.Count == 0)
-            {
-                Problem = "エンティティが循環参照されています．";
-                return;
-            }
-            trees.Sort((a, b) => b.Count - a.Count);
-            SuggestedTopEntity = trees[0][0].Name;
-            SetTopEntity(SuggestedTopEntity);            
-            IsValid = true;
-
-            // 参照関係を1次元リスト化
-            ListItems = new List<EntityHierarchyItem>();
-            foreach (List<EntityHierarchyItem> tree in trees)
-                ListItems.AddRange(tree);
-        }
-
-        // ユーザ回路のトップを変更し，入出力ポートの一覧を更新する
-        public bool SetTopEntity(string top, bool preserveAssignment = false)
+        public static bool Check(string name)
         {
-            if (! Ports.ContainsKey(top.ToLower()))
-                return false;
-            TopEntity = top;
-            TopPorts = Ports[TopEntity.ToLower()];
-            TopPorts.Sort((a, b) => a.Name.CompareTo(b.Name));
-
-            Dictionary<string, string> oldAssignments = new Dictionary<string, string>();
-            if (preserveAssignment && UserPorts != null)
-                foreach (VHDLPort port in UserPorts)
-                    oldAssignments[port.Name] = port.ToAssign;
-
-            UserPorts = new List<VHDLPort>();
-            foreach (VHDLPort port in TopPorts)
-                if (port.IsVector)
-                    for (int i = port.Lower; i <= port.Upper; i += 1)
-                        AddUserPorts(new VHDLPort(port.OriginalName + "(" + i + ")", port.Direction), oldAssignments);
-                else
-                    AddUserPorts(new VHDLPort(port.OriginalName, port.Direction), oldAssignments);
-            return true;
-        }
-
-        // 入出力ポートの一覧にポートを追加
-        private void AddUserPorts(VHDLPort newPort, Dictionary<string, string> oldAssignments)
-        {
-            if (oldAssignments.ContainsKey(newPort.Name))
-                newPort.ToAssign = oldAssignments[newPort.Name];
-            UserPorts.Add(newPort);
-        }
-
-        // target 以下に含まれる回路の数を返す関数
-        private List<EntityHierarchyItem> SearchEntityTree (string target, List<string> parents)
-        {
-            List<EntityHierarchyItem> result = new List<EntityHierarchyItem>();
-            if (parents.Contains(target))  // 循環参照の場合エラー
-                return null;
-            VHDLEntity targetEntity = Entities.Find(x => x.Name == target);
-            if (targetEntity == null) // Entity 宣言がない場合はノーカン
-                return result;
-
-            result.Add(new EntityHierarchyItem
-            {
-                Level = 0,
-                Name = targetEntity.OriginalName,
-                ShortPath = targetEntity.ShortPath,
-                IsTop = false
-            });
-            List<string> newParents = new List<string>(parents);
-            newParents.Add(target);
-            foreach (VHDLComponent component in Components)
-                if (component.From == target)
-                {
-                    List<EntityHierarchyItem> children = SearchEntityTree(component.Name, newParents);
-                    if (children == null)
-                        return null;
-                    foreach (EntityHierarchyItem child in children)
-                        child.Level += 1;
-                    result.AddRange(children);
-                }
-            return result;
+            bool valid = (name != "");
+            Match match = Regex.Match(name, @"^[a-z][a-z0-9_]*$", RegexOptions.IgnoreCase);
+            valid &= match.Success;
+            valid &= !name.Contains("__");
+            valid &= !name.EndsWith("_");
+            valid &= !reservedNames.Contains(name.ToLower());
+            return valid;
         }
     }
 }

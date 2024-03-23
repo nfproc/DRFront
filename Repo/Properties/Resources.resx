@@ -121,11 +121,20 @@
   <data name="DR_TEMPLATE" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\DR_TEMPLATE.vhdl;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
   </data>
+  <data name="DR_TEMPLATE_V" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\DR_TEMPLATE_V.sv;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
+  </data>
   <data name="DR_TESTBENCH" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\DR_TESTBENCH.vhdl;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
   </data>
+  <data name="DR_TESTBENCH_V" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\DR_TESTBENCH_V.sv;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
+  </data>
   <data name="DR_TOP" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\DR_TOP.vhdl;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
+  </data>
+  <data name="DR_TOP_V" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\DR_TOP_V.sv;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
   </data>
   <data name="GENERATE_BITSTREAM" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\GENERATE_BITSTREAM.tcl;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>

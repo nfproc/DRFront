@@ -80,6 +80,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="HDLSources.cs" />
     <Compile Include="SettingViewModel.cs" />
     <Compile Include="MainWindowBoardImage.cs" />
     <Compile Include="MainWindowProjectManagement.cs" />
@@ -96,10 +97,11 @@
     </Compile>
     <Compile Include="TopSelectorViewModel.cs" />
     <Compile Include="Util.cs" />
+    <Compile Include="VerilogSources.cs" />
     <Compile Include="VHDLSources.cs" />
-    <Compile Include="VHDLTemplateViewModel.cs" />
-    <Compile Include="VHDLTemplateWindow.xaml.cs">
-      <DependentUpon>VHDLTemplateWindow.xaml</DependentUpon>
+    <Compile Include="HDLTemplateViewModel.cs" />
+    <Compile Include="HDLTemplateWindow.xaml.cs">
+      <DependentUpon>HDLTemplateWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="TopSelectorWindow.xaml.cs">
       <DependentUpon>TopSelectorWindow.xaml</DependentUpon>
@@ -125,7 +127,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="VHDLTemplateWindow.xaml">
+    <Page Include="HDLTemplateWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -155,8 +157,11 @@
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
     <None Include="Resources\DR_TEMPLATE.vhdl" />
+    <None Include="Resources\DR_TEMPLATE_V.sv" />
     <None Include="Resources\DR_TESTBENCH.vhdl" />
+    <None Include="Resources\DR_TESTBENCH_V.sv" />
     <None Include="Resources\DR_TOP.vhdl" />
+    <None Include="Resources\DR_TOP_V.sv" />
     <None Include="Resources\GENERATE_BITSTREAM.tcl" />
     <None Include="Resources\OPEN_HARDWARE.tcl" />
     <None Include="Resources\OPEN_PROJECT.tcl" />
