@@ -12,7 +12,7 @@ FPGAの一部分をユーザが書き換える形でディジタル回路の設�
 - CMod A7-35T (+ PModLED + PModSWT)
 
 配布パッケージのダウンロード:
-<a href="https://aitech.ac.jp/~dslab/nf/DRFront/DRFront_dist_v0_5_0.zip">
+<a href="https://aitech.ac.jp/~dslab/nf/DRFront/DRFront_dist_v0_5_1.zip">
 ZIP</a> (26.1 MiB)
 
 ### 配布パッケージの内容:
@@ -115,6 +115,9 @@ DRFront には New BSD ライセンスが適用されます．
 詳細は COPYING ファイルを参照してください．
 
 ### 更新履歴
+- v0.5.1 2024-05-06
+  - Vivado のインストール先を指定する際のエラーチェックの不具合を修正．
+
 - v0.5.0 2024-03-23
   - Verilog/SystemVerilog に対するサポートを追加
 
