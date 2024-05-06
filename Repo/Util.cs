@@ -19,16 +19,31 @@ namespace DRFront
         // root ディレクトリに対し，ファイル fileName を持つサブディレクトリの一覧を返す
         public static List<string> GetSubDirs(string root, string fileName)
         {
-            DirectoryInfo rootInfo = new DirectoryInfo(root);
-            List<string> subDirs = new List<string>();
-            if (rootInfo.Exists)
+            DirectoryInfo rootInfo;
+            List<string> results = new List<string>();
+            DirectoryInfo[] subDirs;
+            try
             {
-                foreach (DirectoryInfo subDir in rootInfo.GetDirectories())
-                    if (subDir.GetFiles(fileName).Length != 0)
-                        subDirs.Add(subDir.Name);
+                rootInfo = new DirectoryInfo(root);
+                if (! rootInfo.Exists)
+                    return results;
+                subDirs = rootInfo.GetDirectories();
             }
-            subDirs.Sort();
-            return subDirs;
+            catch (Exception) // 親フォルダにアクセス失敗した場合，空配列を返す
+            {
+                return results;
+            }                
+            foreach (DirectoryInfo subDir in subDirs)
+            {
+                try
+                {
+                    if (subDir.GetFiles(fileName).Length != 0)
+                        results.Add(subDir.Name);
+                }
+                catch (Exception) { } // 子フォルダにアクセス失敗した場合，そのフォルダだけスキップ
+            }
+            results.Sort();
+            return results;
         }
 
         // Vivado のバージョンチェックを行う
@@ -40,7 +55,7 @@ namespace DRFront
         public static string GetLatestVivadoVersion(string root)
         {
             List<string> versions = GetVivadoVersions(root);
-            if (versions != null)
+            if (versions != null && versions.Count != 0)
                 return versions[versions.Count - 1];
             else
                 return null;
