@@ -139,10 +139,16 @@
   <data name="GENERATE_BITSTREAM" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\GENERATE_BITSTREAM.tcl;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
   </data>
+  <data name="GENERATE_BITSTREAM_FROM_SOURCE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GENERATE_BITSTREAM_FROM_SOURCE.tcl;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
+  </data>
   <data name="OPEN_HARDWARE" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\OPEN_HARDWARE.tcl;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
   </data>
   <data name="OPEN_PROJECT" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\OPEN_PROJECT.tcl;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
+    <value>..\Resources\OPEN_PROJECT.tcl;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;iso-2022-jp</value>
+  </data>
+  <data name="OPEN_PROJECT_FROM_SOURCE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\OPEN_PROJECT_FROM_SOURCE.tcl;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;shift_jis</value>
   </data>
 </root>

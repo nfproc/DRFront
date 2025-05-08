@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DRFront"
         mc:Ignorable="d"
-        Title="Setting" Height="250" Width="400" MinHeight="250" MinWidth="400" WindowStartupLocation="CenterOwner">
+        Title="Setting" Height="280" Width="400" MinHeight="280" MinWidth="400" WindowStartupLocation="CenterOwner">
     <Window.Resources>
         <local:PreferredLanguageConverter x:Key="PreferredLanguageConverter" />
     </Window.Resources>
@@ -17,6 +17,7 @@
             <RowDefinition MinHeight="30" Height="Auto"/>
             <RowDefinition MinHeight="30" Height="Auto"/>
             <RowDefinition/>
+            <RowDefinition MinHeight="30" Height="Auto"/>
             <RowDefinition MinHeight="30" Height="Auto"/>
             <RowDefinition MinHeight="30" Height="Auto"/>
         </Grid.RowDefinitions>
@@ -66,9 +67,17 @@
                          IsChecked="{Binding PreferredLanguage, Converter={StaticResource PreferredLanguageConverter}, Mode=TwoWay, ConverterParameter=VHDL}"/>
             <RadioButton Content="SystemVerilog" Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Center"
                          IsChecked="{Binding PreferredLanguage, Converter={StaticResource PreferredLanguageConverter}, Mode=TwoWay, ConverterParameter=SystemVerilog}"/>
-
         </Grid>
-        <Grid Grid.Row="4" Margin="0,10">
+        <Grid Grid.Row="4" Margin="0,5,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" MinWidth="100"/>
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Label Content="Base Design" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <CheckBox Content="Use Checkpoint File" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center"
+                         IsChecked="{Binding UseDCP, Mode=TwoWay}"/>
+        </Grid>
+        <Grid Grid.Row="5" Margin="0,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition />
                 <ColumnDefinition Width="Auto"/>

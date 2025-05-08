@@ -1,5 +1,5 @@
 ﻿// DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
-// Copyright (C) 2022-2024 Naoki FUJIEDA. New BSD License is applied.
+// Copyright (C) 2022-2025 Naoki FUJIEDA. New BSD License is applied.
 //**********************************************************************
 
 using System;
@@ -11,12 +11,25 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Xml.Serialization;
+using Path = System.IO.Path;
 
 namespace DRFront
 {
-    // ■■ ボード画像上に配置される枠に関連するメソッド ■■
+    // ■■ ボード固有の設定に関連するクラス・メソッド ■■
     public partial class MainWindow : Window
     {
+        private class BaseDesignFile
+        {
+            public string Name;
+            public string Source;
+
+            public BaseDesignFile(string source, string name = null)
+            {
+                Source = source;
+                Name = name;
+            }
+        }
+
         // ボード画像上に配置される枠のセットアップ
         private void SetupComponentRects()
         {
@@ -60,6 +73,11 @@ namespace DRFront
 
             TargetFPGA = board.TargetFPGA;
             TargetBoardName = board.TargetBoard;
+            BaseDCPFileName = board.DCPSource.Path;
+            BaseHDLFileNames = new List<string>();
+            foreach (DRFrontBoardDefinition.DRFrontBoardHDLSource src in board.HDLSources)
+                BaseHDLFileNames.Insert((src.Top == 1) ? 0 : BaseHDLFileNames.Count, src.Path);
+
             foreach (DRFrontBoardDefinition.DRFrontBoardComponent comp in board.Components)
             {
                 string cname = comp.Name;
@@ -151,6 +169,35 @@ namespace DRFront
                     return loc.Key;
             return "";
         }
+
+        // ベース設計のファイル一覧を返す
+        private List<BaseDesignFile> EnumerateBaseDesignFiles()
+        {
+            List<BaseDesignFile> result = new List<BaseDesignFile>();
+            string boardDir = BaseDir + FileName.BoardsDir + ST.TargetBoardDir + @"\";
+            if (ST.UseDCP)
+            {
+                result.Add(new BaseDesignFile(BaseDCPFileName, FileName.BaseCheckPoint));
+            }
+            else
+            {
+                result.Add(new BaseDesignFile(BaseHDLFileNames[0], FileName.BaseTopHDL));
+                for (int i = 1; i < BaseHDLFileNames.Count; i++)
+                    result.Add(new BaseDesignFile(BaseHDLFileNames[i]));
+            }
+            foreach (BaseDesignFile f in result)
+            {
+                if (! File.Exists(boardDir + f.Source))
+                {
+                    MsgBox.Warn("ベース設計のファイル " + f.Source + " が見つかりません．");
+                    return null;
+                }
+                f.Source = boardDir + f.Source;
+                if (f.Name == null)
+                    f.Name = Path.GetFileName(f.Source);
+            }
+            return result;
+        }
     }
 
     // ボード定義ファイルの XML に対応したクラス
@@ -175,5 +222,17 @@ namespace DRFront
             [XmlAttribute("default")] public string DefaultValue;
         }
         [XmlElement("Component")] public List<DRFrontBoardComponent> Components;
+        public class DRFrontBoardDCPSource
+        {
+            [XmlAttribute("path")] public string Path;
+        }
+        public DRFrontBoardDCPSource DCPSource;
+        public class DRFrontBoardHDLSource
+        {
+            [XmlAttribute("path")]      public string Path;
+            [XmlAttribute("topmodule")] public int    Top;
+            DRFrontBoardHDLSource() { Top = 0; }
+        }
+        [XmlElement("HDLSource")] public List<DRFrontBoardHDLSource> HDLSources;
     }
 }

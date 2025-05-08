@@ -1,5 +1,5 @@
 ﻿// DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
-// Copyright (C) 2022-2024 Naoki FUJIEDA. New BSD License is applied.
+// Copyright (C) 2022-2025 Naoki FUJIEDA. New BSD License is applied.
 //**********************************************************************
 
 using System;
@@ -60,7 +60,8 @@ namespace DRFront
                 if (args != null)
                 {
                     foreach (KeyValuePair<string, string> arg in args)
-                        sw.WriteLine("set " + arg.Key + " " + arg.Value);
+                        if (arg.Value != null)
+                            sw.WriteLine("set " + arg.Key + " " + arg.Value);
                     sw.WriteLine("");
                 }
                 foreach (string line in templateLines)

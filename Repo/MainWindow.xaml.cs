@@ -1,5 +1,5 @@
 ﻿// DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
-// Copyright (C) 2022-2024 Naoki FUJIEDA. New BSD License is applied.
+// Copyright (C) 2022-2025 Naoki FUJIEDA. New BSD License is applied.
 //**********************************************************************
 
 using System.IO;
@@ -37,6 +37,8 @@ namespace DRFront
         private string DRFrontVersion;
         private DateTime VivadoLastLaunched;
         private string TargetFPGA, TargetBoardName;
+        private string BaseDCPFileName;
+        private List<string> BaseHDLFileNames;
         private List<string> SourceFileNames;
         private const string NewProjectLabel = "(New Project)";
         private string LastSourceDir = "";
@@ -46,6 +48,7 @@ namespace DRFront
         {
             public const string BaseCheckPoint = "base.dcp";
             public const string UserCheckPoint = "__checkpoint.dcp";
+            public const string BaseTopHDL = "top.vhdl";
             public const string TopVHDL = "dr_top.vhdl";
             public const string TestBenchVHDL = "dr_testbench.vhdl";
             public const string TopVerilog = "dr_top.sv";
@@ -260,29 +263,56 @@ namespace DRFront
                 return;
             if (! CheckUserPortModified())
                 return;
+            List<BaseDesignFile> baseFiles = EnumerateBaseDesignFiles();
+            if (baseFiles == null)
+                return;
 
             // ログを保存するフォルダ（なければ作成）
-            if (!Directory.Exists(VM.SourceDirPath + @"\" + VM.CurrentProject + @"\logs"))
+            if (! Directory.Exists(VM.SourceDirPath + @"\" + VM.CurrentProject + @"\logs"))
                 Directory.CreateDirectory(VM.SourceDirPath + @"\" + VM.CurrentProject + @"\logs");
 
             // テストベンチ
             GenerateTestBenchHDL(VM.CurrentProject);
 
-            // プロジェクトを開く Tcl スクリプト
-            Dictionary<string, string> argsOpen = new Dictionary<string, string>();
-            string escapedSource = "";
+            // Tcl スクリプトで使用する変数の準備
             string topHDL       = (ST.PreferredLanguage == "VHDL") ? FileName.TopVHDL : FileName.TopVerilog;
             string testbenchHDL = (ST.PreferredLanguage == "VHDL") ? FileName.TestBenchVHDL : FileName.TestBenchVerilog;
+            string escapedSource = "";
+            string ilaFile = null;
+            string xdcFile = null;
             foreach (string fileName in SourceFileNames)
                 escapedSource += "../" + (new FileInfo(fileName).Name.Replace(" ", @"\ ")) + " ";
+            foreach (BaseDesignFile b in baseFiles)
+            {
+                if (b.Name.EndsWith(".xci"))
+                {
+                    escapedSource += "./" + b.Name + " ";
+                    ilaFile = b.Name;
+                }
+                else if (b.Name.EndsWith(".xdc"))
+                {
+                    xdcFile = b.Name;
+                }
+                else if (! b.Name.EndsWith(".dcp"))
+                {
+                    escapedSource += "./" + b.Name + " ";
+                }
+            }
             escapedSource += "./" + topHDL;
-
+            
+            // プロジェクトを開く Tcl スクリプト
+            Dictionary<string, string> argsOpen = new Dictionary<string, string>();
             argsOpen.Add("project_name", VM.CurrentProject);
+            argsOpen.Add("top_module_name", TopFinder.TopEntity);
             argsOpen.Add("source_files", "{" + escapedSource + "}");
             argsOpen.Add("testbench_file", testbenchHDL);
+            argsOpen.Add("ila_file", ilaFile);
+            argsOpen.Add("xdc_file", xdcFile);
             argsOpen.Add("target_fpga", TargetFPGA);
             argsOpen.Add("target_board", TargetBoardName);
-            PrepareTcl(VM.CurrentProject, FileName.OpenProjectTCL, Properties.Resources.OPEN_PROJECT, argsOpen);
+            argsOpen.Add("force_gui", "1");
+            string templateOpen = (ST.UseDCP) ? Properties.Resources.OPEN_PROJECT : Properties.Resources.OPEN_PROJECT_FROM_SOURCE;
+            PrepareTcl(VM.CurrentProject, FileName.OpenProjectTCL, templateOpen, argsOpen);
 
             // ビットストリームを生成する Tcl スクリプト
             Dictionary<string, string> argsGen = new Dictionary<string, string>();
@@ -291,36 +321,35 @@ namespace DRFront
             argsGen.Add("top_module_name", TopFinder.TopEntity);
             argsGen.Add("checkpoint_base", FileName.BaseCheckPoint);
             argsGen.Add("checkpoint_proj", FileName.UserCheckPoint);
-            PrepareTcl(VM.CurrentProject, FileName.BitGenTCL, Properties.Resources.GENERATE_BITSTREAM, argsGen);
+            argsGen.Add("force_gui", "1");
+            string templateGen = (ST.UseDCP) ? Properties.Resources.GENERATE_BITSTREAM : Properties.Resources.GENERATE_BITSTREAM_FROM_SOURCE;
+            PrepareTcl(VM.CurrentProject, FileName.BitGenTCL, templateGen, argsGen);
 
             // ハードウェアを開く Tcl スクリプト
-            PrepareTcl(VM.CurrentProject, FileName.OpenHWTCL, Properties.Resources.OPEN_HARDWARE);
+            Dictionary<string, string> argsHW = new Dictionary<string, string>();
+            argsHW.Add("force_gui", "1");
+            PrepareTcl(VM.CurrentProject, FileName.OpenHWTCL, Properties.Resources.OPEN_HARDWARE, argsHW);
 
             // ベース設計のコピー
-            string dcpBase = GetBaseCheckpointName();
-            if (dcpBase == "")
-            {
-                MsgBox.Warn("ベース設計のチェックポイントファイルが見つかりません．");
-                return;
-            }
-
             string projectDir = VM.SourceDirPath + @"\" + VM.CurrentProject;
-            string checkPointPath = projectDir + @"\" + FileName.BaseCheckPoint;
-            try
+            foreach (BaseDesignFile b in baseFiles)
             {
-                File.Copy(dcpBase, checkPointPath, true);
-            }
-            catch (Exception ex)
-            {
-                if ((ex is UnauthorizedAccessException) && (CompareFileHash(dcpBase, checkPointPath)))
+                try
                 {
-                    MsgBox.Warn("ベース設計のチェックポイントファイルのコピーに失敗しましたが，同一ファイルが既に存在するので，このまま続けます．");
+                    File.Copy(b.Source, projectDir + @"\" + b.Name, true);
+                }
+                catch (Exception ex)
+                {
+                    if ((ex is UnauthorizedAccessException) && (CompareFileHash(b.Source, projectDir + @"\" + b.Name)))
+                {
+                    MsgBox.Warn("ベース設計ファイル " + b.Name + "のコピーに失敗しましたが，同一ファイルが既に存在するので，このまま続けます．");
                 }
                 else
                 {
-                    MsgBox.Warn("ベース設計のチェックポイントファイルのコピーに失敗しました．");
+                    MsgBox.Warn("ベース設計ファイル" + b.Name + "のコピーに失敗しました．");
                     return;
                 }
+            }
             }
             MsgBox.Info("Vivado 用のスクリプトや，テストベンチの雛形を作成・更新しました．");
         }
@@ -343,14 +372,14 @@ namespace DRFront
             else if (senderName == "btnBitGen")
             {
                 tclFile = FileName.BitGenTCL;
-                if (! CheckVivadoFilesStale(dcps, srcs, "チェックポイント", "ソースファイル"))
+                if (ST.UseDCP && ! CheckVivadoFilesStale(dcps, srcs, "チェックポイント", "ソースファイル"))
                     return;
             }
             else if (senderName == "btnOpenHW")
             {
                 tclFile = FileName.OpenHWTCL;
                 if (! CheckVivadoFilesStale(bits, srcs, "ビットストリーム", "ソースファイル") ||
-                    ! CheckVivadoFilesStale(bits, dcps, "ビットストリーム", "チェックポイント"))
+                    ST.UseDCP && ! CheckVivadoFilesStale(bits, dcps, "ビットストリーム", "チェックポイント"))
                     return;
             }
             else
@@ -358,9 +387,9 @@ namespace DRFront
 
             if (! CheckForLaunchVivado())
                 return;
-            if (!CheckProjectVersion(VM.CurrentProject))
+            if (! CheckProjectVersion(VM.CurrentProject))
                 return;
-            if (! CheckTclVersion(VM.CurrentProject,tclFile))
+            if (! CheckTclVersion(VM.CurrentProject, tclFile))
                 return;
 
             LaunchVivado(VM.CurrentProject, tclFile, useBatchMode);

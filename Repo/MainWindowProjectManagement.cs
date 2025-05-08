@@ -1,9 +1,8 @@
 ﻿// DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
-// Copyright (C) 2022-2024 Naoki FUJIEDA. New BSD License is applied.
+// Copyright (C) 2022-2025 Naoki FUJIEDA. New BSD License is applied.
 //**********************************************************************
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -18,15 +17,12 @@ namespace DRFront
         private class VivadoProject
         {
             public string Name;
-            public bool IsValid, TCLExists, DCPExists, BITExists;
+            public bool IsValid, TCLExists, DCPExists, BITExists, BaseDCPExists, TopHDLExists;
 
-            public VivadoProject(string name, bool isValid, bool tclExists, bool dcpExists, bool bitExists)
+            public VivadoProject(string name)
             {
                 Name = name;
-                IsValid   = isValid;
-                TCLExists = tclExists;
-                DCPExists = dcpExists;
-                BITExists = bitExists;
+                IsValid = TCLExists = DCPExists = BITExists = BaseDCPExists = TopHDLExists = false;
             }
         }
 
@@ -93,7 +89,7 @@ namespace DRFront
             VM.IsNewProjectSelected = (proj != null) && (VM.CurrentProject == NewProjectLabel);
             VM.IsProjectValid = (proj != null) && proj.IsValid;
             VM.IsTCLAvailable = (proj != null) && proj.TCLExists;
-            VM.IsDCPAvailable = (proj != null) && proj.DCPExists;
+            VM.IsDCPAvailable = (proj != null) && ((ST.UseDCP) ? proj.DCPExists : proj.TCLExists);
             VM.IsBITAvailable = (proj != null) && proj.BITExists;
             if (proj == null || VM.IsNewProjectSelected)
             {
@@ -173,18 +169,22 @@ namespace DRFront
         // 指定されたフォルダが Vivado のプロジェクトかどうかチェックする
         private VivadoProject CheckVivadoProject(string project)
         {
+            VivadoProject vp = new VivadoProject(project);
             if (project == NewProjectLabel)
-                return new VivadoProject(project, false, false, false, false);
+                return vp;
             
             string fullName = VM.SourceDirPath + @"\" + project;
             string topHDL = (ST.PreferredLanguage == "VHDL") ? FileName.TopVHDL : FileName.TopVerilog;
             if (File.Exists(fullName + @"\" + topHDL) ||
                 File.Exists(fullName + @"\" + project + ".xpr"))
             {
-                bool tcl = (EnumerateVivadoFiles(fullName, "TCLFile").Count != 0);
-                bool dcp = (EnumerateVivadoFiles(fullName, "DCPFileExceptBase").Count != 0);
-                bool bit = (EnumerateVivadoFiles(fullName, "BITFile").Count != 0);
-                return new VivadoProject(project, true, tcl, dcp, bit);
+                vp.IsValid       = true;
+                vp.TCLExists     = (EnumerateVivadoFiles(fullName, "TCLFile").Count != 0);
+                vp.DCPExists     = (EnumerateVivadoFiles(fullName, "DCPFileExceptBase").Count != 0);
+                vp.BITExists     = (EnumerateVivadoFiles(fullName, "BITFile").Count != 0);
+                vp.TopHDLExists  = (EnumerateVivadoFiles(fullName, "TopHDLFile").Count != 0);
+                vp.BaseDCPExists = (EnumerateVivadoFiles(fullName, "BaseDCPFile").Count != 0);
+                return vp;
             }
             return null;
         }
@@ -195,28 +195,36 @@ namespace DRFront
             string warnMessage = null;
             List<string> filesByDRFront = new List<string>
             {
-                FileName.BaseCheckPoint.ToLower(),
                 FileName.TopVHDL.ToLower(),
+                FileName.TopVerilog.ToLower(),
                 FileName.TestBenchVHDL.ToLower(),
+                FileName.TestBenchVerilog.ToLower(),
                 FileName.OpenProjectTCL.ToLower(),
                 FileName.BitGenTCL.ToLower(),
                 FileName.OpenHWTCL.ToLower(),
                 FileName.LogFolder.ToLower()
             };
-            VivadoProjectVersion proj = GetProjectVersion(project);
-            if (proj != null && ST.VivadoVersion != null && proj.VivadoVersion != ST.VivadoVersion)
+            if (ST.UseDCP)
+                filesByDRFront.Add(FileName.BaseCheckPoint.ToLower());
+
+            VivadoProject vp = CheckVivadoProject(project);
+            VivadoProjectVersion vpv = GetProjectVersion(project);
+            if (vpv != null && ST.VivadoVersion != null && vpv.VivadoVersion != ST.VivadoVersion)
                 warnMessage = "Vivado のバージョンが一致しません．\n"
                     + "この PC の Vivado バージョン: " + ST.VivadoVersion + "\n"
-                    + "プロジェクトの Vivado バージョン: " + proj.VivadoVersion + "\n"
-                    + "Vivado が作成したファイルを削除して続行しますか？";
-            else if (proj != null && TargetFPGA != null && proj.TargetFPGA != TargetFPGA)
+                    + "プロジェクトの Vivado バージョン: " + vpv.VivadoVersion;
+            else if (vpv != null && TargetFPGA != null && vpv.TargetFPGA != TargetFPGA)
                 warnMessage = "対象とする FPGA の型番が一致しません．\n"
-                    + "現在設定しているボードの FPGA: " + proj.TargetFPGA + "\n"
-                    + "プロジェクトが対象とする FPGA: " + TargetFPGA + "\n"
-                    + "Vivado が作成したファイルを削除して続行しますか？";
+                    + "現在設定しているボードの FPGA: " + vpv.TargetFPGA + "\n"
+                    + "プロジェクトが対象とする FPGA: " + TargetFPGA;
+            else if ((ST.UseDCP) ? vp.TopHDLExists : vp.BaseDCPExists)
+                warnMessage = "ベース設計のソースの形式が一致しません．\n"
+                    + "現在設定している形式: " + ((ST.UseDCP) ? "チェックポイント" : "HDL") + "\n"
+                    + "プロジェクトにあるソース: " + ((ST.UseDCP) ? "HDL" : "チェックポイント");
 
             if (warnMessage != null)
             {
+                warnMessage += "\nVivado が作成したファイルを削除して続行しますか？";
                 if (!MsgBox.WarnAndConfirm(warnMessage))
                     return false;
 
@@ -300,36 +308,24 @@ namespace DRFront
         private List<string> EnumerateVivadoFiles(string dir, string mode, bool full = false)
         {
             List<string> result = new List<string>();
-            string ext = ".*";
+            string query = "*.*";
             if (mode == "BITFile")
-                ext = ".bit";
+                query = "*.bit";
             else if (mode == "TCLFile")
-                ext = ".tcl";
+                query = "*.tcl";
             else if (mode == "DCPFile" || mode == "DCPFileExceptBase")
-                ext = ".dcp";
+                query = "*.dcp";
+            else if (mode == "BaseDCPFile")
+                query = FileName.BaseCheckPoint;
+            else if (mode == "TopHDLFile")
+                query = FileName.BaseTopHDL;
 
             DirectoryInfo dirInfo = new DirectoryInfo(dir);
             if (dirInfo.Exists)
-                foreach (FileInfo file in dirInfo.GetFiles("*" + ext))
-                    if (file.Name.EndsWith(ext) &&
-                        (mode != "DCPFileExceptBase" || file.Name != FileName.BaseCheckPoint))
+                foreach (FileInfo file in dirInfo.GetFiles(query))
+                    if (mode != "DCPFileExceptBase" || file.Name != FileName.BaseCheckPoint)
                         result.Add((full) ? file.FullName : file.Name);
             return result;
-        }
-
-        // ベースデザインの dcp ファイルのある場所を返す
-        private string GetBaseCheckpointName()
-        {
-            List<string> baseNames = EnumerateVivadoFiles(BaseDir + FileName.BoardsDir + ST.TargetBoardDir, "DCPFile");
-
-            if (baseNames.Count == 0)
-                return "";
-            if (baseNames.Count > 1)
-                if (! MsgBox.WarnAndConfirm("ベース設計のチェックポイントファイルが複数見つかりました．\n" +
-                    baseNames[baseNames.Count - 1] + "を使用します．\n続行しますか？"))
-                    return "";
-
-            return BaseDir + FileName.BoardsDir + ST.TargetBoardDir + "\\" + baseNames[baseNames.Count - 1];
         }
 
         // プロジェクトや dcp が複数ある場合の名前比較用メソッドを実装するクラス

@@ -1,6 +1,6 @@
 DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
 ============================================================
-Copyright (C) 2022-2024 Naoki FUJIEDA. All rights reserved.
+Copyright (C) 2022-2025 Naoki FUJIEDA. All rights reserved.
 
 ### 概要
 
@@ -12,11 +12,11 @@ FPGAの一部分をユーザが書き換える形でディジタル回路の設�
 - CMod A7-35T (+ PModLED + PModSWT)
 
 配布パッケージのダウンロード:
-<a href="https://aitech.ac.jp/~dslab/nf/DRFront/DRFront_dist_v0_5_1.zip">
+<a href="https://aitech.ac.jp/~dslab/nf/DRFront/DRFront_dist_v0_6_0.zip">
 ZIP</a> (26.1 MiB)
 
 ### 配布パッケージの内容:
-- Boards/               : ボード定義（ベース設計のチェックポイントを含む）
+- Boards/               : ボード定義（ベース設計のソース一式を含む）
 - ext/svinst_port.exe   : DRFront が使用する svinst_port の実行ファイル
 - sources/              : プログラムのソースコード
 - COPYING               : 著作権表記
@@ -86,6 +86,21 @@ Vivado からスクリプトを読み込ませて操作することも可能で�
 に保存されている，OpenProject.tcl，GenerateBitstream.tcl，OpenHW.tcl を，
 それぞれ Tool → Run Tcl Script から実行してください．
 
+### チェックポイントファイルを使用しない場合
+v0.6.0 以降のバージョンでは，設定ウィンドウにて Use Checkpoint File の
+チェックを外すことで，ベース設計を HDL ソースコードから論理合成する方法も
+利用できます．この場合，上述の手順にいくつかの変更が加わります．
+- 6の手順では，チェックポイントではなく，ソース一式がプロジェクトにコピー
+  されます．
+- 7の手順は，論理合成・配置配線だけを行う場合，スキップできます．Generate
+  Bitstream ボタンを押すと，ベース設計を含むすべての回路が論理合成・配置
+  配線されます．DFX 機能は使用しません．Open Project ボタンは，シミュレー
+  ションのため Vivado を開くときに使います．
+
+この方法では，各プロジェクトでベース設計を最初に論理合成する際，ロジック
+アナライザ（ILA）の論理合成が行われます．また，ベース設計も配置配線の対象
+になります．そのため，8の手順の所要時間が少し長くなります．
+
 ### 注意事項
 トップモジュールやそのポート名は極力自動で認識するようプログラミングして
 いますが，以下の前提があります．前提に基づかない記述がある場合，これらが
@@ -115,6 +130,9 @@ DRFront には New BSD ライセンスが適用されます．
 詳細は COPYING ファイルを参照してください．
 
 ### 更新履歴
+- v0.6.0 2025-05-08
+  - ベース設計を HDL ソースコードから論理合成するフローのサポートを追加．
+
 - v0.5.1 2024-05-06
   - Vivado のインストール先を指定する際のエラーチェックの不具合を修正．
 

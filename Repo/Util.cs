@@ -1,5 +1,5 @@
 ﻿// DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
-// Copyright (C) 2022-2024 Naoki FUJIEDA. New BSD License is applied.
+// Copyright (C) 2022-2025 Naoki FUJIEDA. New BSD License is applied.
 //**********************************************************************
 
 using System;
@@ -70,13 +70,15 @@ namespace DRFront
         public string VivadoVersion;
         public string TargetBoardDir;
         public string PreferredLanguage;
+        public bool UseDCP;
         private bool disableSaveSettings;
 
-        public const string DRFrontCurrentDataVersion = "0.4";
+        public const string DRFrontCurrentDataVersion = "0.6";
 
         public DRFrontSettings()
         {
             DRFrontVersion = DRFrontCurrentDataVersion;
+            UseDCP = true;
             disableSaveSettings = false;
         }
 
@@ -100,6 +102,8 @@ namespace DRFront
                 VivadoVersion = newSettings.VivadoVersion;
                 TargetBoardDir = newSettings.TargetBoardDir;
                 PreferredLanguage = newSettings.PreferredLanguage;
+                if (Double.TryParse(newSettings.DRFrontVersion, out double ver) && ver >= 0.6)
+                    UseDCP = newSettings.UseDCP;
                 fs.Close();
             }
             catch (FileNotFoundException)

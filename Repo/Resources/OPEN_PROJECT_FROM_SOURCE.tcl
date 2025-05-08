@@ -18,11 +18,13 @@ if { [ current_project -quiet ] ne "" } {
 
 namespace eval _tcl {
   proc add_fileset {} {
-    global source_files testbench_file
+    global source_files testbench_file ila_file xdc_file
     add_files -norecurse $source_files
-    set_property SOURCE_SET sources_1 [ get_filesets sim_1 ]
+    export_ip_user_files -of_objects [get_files $ila_file] -force -quiet
     add_files -fileset sim_1 -norecurse $testbench_file
-    set_property top DR_TOP [ get_filesets sources_1 ]
+    add_files -fileset constrs_1 -norecurse $xdc_file
+    set_property SOURCE_SET sources_1 [ get_filesets sim_1 ]
+    set_property top TOP [ get_filesets sources_1 ]
     set_property TOP DR_TESTBENCH [ get_filesets sim_1 ]
     update_compile_order -force_gui
     return 0
@@ -53,5 +55,4 @@ if { [ file exists ${project_name}.xpr ] == 1 } {
   }
   _tcl::add_fileset
   set_property STEPS.SYNTH_DESIGN.ARGS.FLATTEN_HIERARCHY none [ get_runs synth_1 ]
-  set_property -name {STEPS.SYNTH_DESIGN.ARGS.MORE OPTIONS} -value {-mode out_of_context} -objects [ get_runs synth_1 ]
 }

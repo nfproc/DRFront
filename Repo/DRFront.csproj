@@ -82,7 +82,7 @@
     </ApplicationDefinition>
     <Compile Include="HDLSources.cs" />
     <Compile Include="SettingViewModel.cs" />
-    <Compile Include="MainWindowBoardImage.cs" />
+    <Compile Include="MainWindowBoardManagement.cs" />
     <Compile Include="MainWindowProjectManagement.cs" />
     <Compile Include="MainWindowSourceManagement.cs" />
     <Compile Include="MainWindowVivado.cs" />
@@ -163,8 +163,10 @@
     <None Include="Resources\DR_TOP.vhdl" />
     <None Include="Resources\DR_TOP_V.sv" />
     <None Include="Resources\GENERATE_BITSTREAM.tcl" />
+    <None Include="Resources\GENERATE_BITSTREAM_FROM_SOURCE.tcl" />
     <None Include="Resources\OPEN_HARDWARE.tcl" />
     <None Include="Resources\OPEN_PROJECT.tcl" />
+    <None Include="Resources\OPEN_PROJECT_FROM_SOURCE.tcl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

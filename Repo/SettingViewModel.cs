@@ -1,5 +1,5 @@
 ﻿// DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
-// Copyright (C) 2022-2024 Naoki FUJIEDA. New BSD License is applied.
+// Copyright (C) 2022-2025 Naoki FUJIEDA. New BSD License is applied.
 //**********************************************************************
 
 using System;
@@ -63,6 +63,19 @@ namespace DRFront
                     return;
                 _preferredLanguage = value;
                 OnPropertyChanged("PreferredLanguage");
+            }
+        }
+
+        private bool _useDCP = true;
+        public bool UseDCP
+        {
+            get => _useDCP;
+            set
+            {
+                if (_useDCP == value)
+                    return;
+                _useDCP = value;
+                OnPropertyChanged("UseDCP");
             }
         }
 

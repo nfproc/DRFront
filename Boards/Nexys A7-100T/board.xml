@@ -3,6 +3,18 @@
   <TargetFPGA>xc7a100tcsg324-1</TargetFPGA>
   <TargetBoard>digilentinc.com:nexys-a7-100t:part0:1.0</TargetBoard>
   <BoardImage path="Nexys.jpg" width="600" height="320" />
+  <DCPSource path="base.dcp" />
+  <HDLSource path="../base/fifo.vhdl" />
+  <HDLSource path="../base/io_7segreg.vhdl" />
+  <HDLSource path="../base/io_ledreg.vhdl" />
+  <HDLSource path="../base/io_translator.vhdl" />
+  <HDLSource path="../base/serial_fifo.vhdl" />
+  <HDLSource path="../base/serial_recv.vhdl" />
+  <HDLSource path="../base/serial_send.vhdl" />
+  <HDLSource path="../base/uart_switch.vhdl" />
+  <HDLSource path="top.vhdl" topmodule="1" />
+  <HDLSource path="ila_0.xci" />
+  <HDLSource path="Nexys.xdc" />
   <Component name="SW(0)" left="538" top="256" width="30" height="60" />
   <Component name="SW(1)" left="505" top="256" width="30" height="60" />
   <Component name="SW(2)" left="471" top="256" width="30" height="60" />

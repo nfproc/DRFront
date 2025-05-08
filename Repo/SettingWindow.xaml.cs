@@ -1,5 +1,5 @@
 ﻿// DRFront: A Dynamic Reconfiguration Frontend for Xilinx FPGAs
-// Copyright (C) 2022-2024 Naoki FUJIEDA. New BSD License is applied.
+// Copyright (C) 2022-2025 Naoki FUJIEDA. New BSD License is applied.
 //**********************************************************************
 
 using System;
@@ -29,7 +29,8 @@ namespace DRFront
             foreach (string board in Util.GetSubDirs(baseDir, "board.xml"))
                 VM.TargetBoards.Add(board);
             VM.SelectedBoard = oldSetting.TargetBoardDir;
-            VM.PreferredLanguage = oldSetting.PreferredLanguage;            
+            VM.PreferredLanguage = oldSetting.PreferredLanguage;
+            VM.UseDCP = oldSetting.UseDCP;
         }
 
         private void VivadoDir_TextChanged(object sender, TextChangedEventArgs e)
@@ -81,6 +82,7 @@ namespace DRFront
             NewSetting.VivadoVersion = VM.SelectedVersion;
             NewSetting.TargetBoardDir = VM.SelectedBoard;
             NewSetting.PreferredLanguage = VM.PreferredLanguage;
+            NewSetting.UseDCP = VM.UseDCP;
             Close();
         }
 
