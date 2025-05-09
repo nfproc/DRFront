@@ -13,7 +13,7 @@ FPGAの一部分をユーザが書き換える形でディジタル回路の設�
 
 配布パッケージのダウンロード:
 <a href="https://aitech.ac.jp/~dslab/nf/DRFront/DRFront_dist_v0_6_0.zip">
-ZIP</a> (26.1 MiB)
+ZIP</a> (22.2 MiB)
 
 ### 配布パッケージの内容:
 - Boards/               : ボード定義（ベース設計のソース一式を含む）
